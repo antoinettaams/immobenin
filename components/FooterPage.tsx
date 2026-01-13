@@ -51,7 +51,7 @@ export const FooterPages: React.FC<FooterPageProps> = ({ page }) => {
                 <div className="flex flex-col justify-center">
                   <h3 className="text-2xl font-bold mb-4">Une mission locale</h3>
                   <p className="text-gray-600">
-                    Nous sommes une équipe basée à Cotonou, passionnée par la technologie et l'immobilier. 
+                    Nous sommes une équipe basée à Cotonou, passionnée par la technologie et l&apos;immobilier. 
                     Notre objectif est de digitaliser le secteur tout en respectant nos réalités culturelles.
                   </p>
                 </div>
@@ -88,10 +88,10 @@ export const FooterPages: React.FC<FooterPageProps> = ({ page }) => {
             >
               <div className="text-center mb-12">
                 <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
-                  Rejoignez l'aventure
+                  Rejoignez l&apos;aventure
                 </h1>
                 <p className="text-xl text-gray-600">
-                  Aidez-nous à construire le futur de l'immobilier au Bénin.
+                  Aidez-nous à construire le futur de li&apos;mmobilier au Bénin.
                 </p>
               </div>
 
@@ -255,7 +255,7 @@ export const FooterPages: React.FC<FooterPageProps> = ({ page }) => {
             >
               <h1 className="text-4xl font-extrabold text-gray-900 mb-8 flex items-center gap-3">
                 <HelpCircle className="w-10 h-10 text-brand" aria-hidden="true" /> 
-                Centre d'aide
+                Centre d&apos;aide
               </h1>
               
               <div className="mb-8">
@@ -340,7 +340,7 @@ export const FooterPages: React.FC<FooterPageProps> = ({ page }) => {
               transition={{ duration: 0.5 }}
             >
               <h1 className="text-3xl font-extrabold text-gray-900 mb-8">
-                Politiques d'annulation
+                Politiques d&apos;annulation
               </h1>
               
               <div className="space-y-6">
@@ -388,7 +388,7 @@ export const FooterPages: React.FC<FooterPageProps> = ({ page }) => {
                     >
                       <option value="suspicious">Annonce suspecte</option>
                       <option value="payment">Problème de paiement</option>
-                      <option value="behavior">Comportement de l'hôte/voyageur</option>
+                      <option value="behavior">Comportement de l&apos;hôte/voyageur</option>
                     </select>
                   </div>
                   <div>
@@ -419,13 +419,13 @@ export const FooterPages: React.FC<FooterPageProps> = ({ page }) => {
           <div className={containerClass}>
             <h1 className="text-3xl font-bold text-gray-900">Page non trouvée</h1>
             <p className="text-gray-600 mt-2">
-              La page que vous recherchez n'existe pas ou a été déplacée.
+              La page que vous recherchez n&apos;existe pas ou a été déplacée.
             </p>
             <Link 
               href="/" 
               className="inline-block mt-4 text-brand hover:text-brand-dark font-semibold"
             >
-              ← Retour à l'accueil
+              ← Retour à l&apos;accueil
             </Link>
           </div>
         );
