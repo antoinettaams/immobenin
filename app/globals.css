@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/* Configuration des couleurs personnalisées */
+@theme {
+  --color-brand: #FF385C;
+  --color-brand-dark: #D90B3E;
+  --color-brand-light: #FF647F;
+}
+
+/* Styles globaux */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
