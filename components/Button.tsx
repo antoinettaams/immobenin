@@ -78,7 +78,7 @@ export const Button: React.FC<ButtonProps> = ({
           <span className="sr-only">{loadingText}</span>
           <span aria-hidden="true">{loadingText}</span>
         </div>
-      ) : (
+      ) : ( 
         children
       )}
     </motion.button>

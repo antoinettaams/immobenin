@@ -150,7 +150,7 @@ export const Header: React.FC = () => {
             aria-modal="true"
             aria-label="Menu mobile"
           >
-            <nav className="flex flex-col p-6 gap-6 text-center text-lg font-medium text-gray-800">
+            <nav className="flex flex-col p-6 gap-6  text-lg font-medium text-gray-800">
               <Link 
                 href="/" 
                 className={`py-2 hover:text-brand transition-colors ${isActive('/') ? 'text-brand font-semibold' : ''}`}
@@ -176,7 +176,7 @@ export const Header: React.FC = () => {
                 Devenir hôte
               </Link>
               <hr className="border-gray-100" />
-              <div className="flex justify-center gap-6 pt-2">
+              <div className="flex   gap-6 pt-2">
                  <button 
                    className="flex items-center gap-2 text-sm text-gray-500"
                    type="button"

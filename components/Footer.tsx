@@ -58,16 +58,16 @@ export const Footer: React.FC = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 grid md:grid-cols-4 gap-12 border-b border-gray-800 pb-12 text-center md:text-left">
+      <div className="container mx-auto px-4 grid md:grid-cols-4 gap-12 border-b border-gray-800 pb-12   md:text-left">
         {/* Logo et description */}
-        <div className="flex flex-col items-center md:items-start">
+        <div className="flex flex-col  md:items-start">
           <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
             ImmoBenin
           </h3>
           <p className="text-gray-400 mb-6">
             La plateforme de référence pour la location d&apos;espaces au Bénin. Simple, sécurisé, local.
           </p>
-          <div className="flex gap-4 justify-center md:justify-start">
+          <div className="flex gap-4 md:justify-start">
             <a 
               href="https://facebook.com" 
               target="_blank" 
@@ -109,42 +109,42 @@ export const Footer: React.FC = () => {
 
         {/* À propos */}
         <div>
-          <h4 className="font-bold text-lg mb-6">À propos</h4>
+          <h4 className="font-bold text-lg mb-6">Liens rapides</h4>
           <ul className="space-y-4 text-gray-400">
             <li>
               <Link 
-                href="/about" 
+                href="#" 
                 className="hover:text-white transition-colors inline-block"
-                aria-label="Notre histoire"
+                aria-label="Comment ça marche"
               >
-                Notre histoire
+                Accueil
               </Link>
             </li>
             <li>
               <Link 
-                href="/careers" 
+                href="/search" 
                 className="hover:text-white transition-colors inline-block"
-                aria-label="Carrières"
+                aria-label="Rechcercher"
               >
-                Carrières
+                Rechercher
               </Link>
             </li>
             <li>
               <Link 
-                href="/press" 
+                href="/publish" 
                 className="hover:text-white transition-colors inline-block"
-                aria-label="Presse"
+                aria-label="Publier"
               >
-                Presse
+                Devenir hôte
               </Link>
             </li>
             <li>
               <Link 
-                href="/blog" 
+                href="/contact" 
                 className="hover:text-white transition-colors inline-block"
-                aria-label="Blog"
+                aria-label="Contact"
               >
-                Blog
+                Contact
               </Link>
             </li>
           </ul>
@@ -156,7 +156,7 @@ export const Footer: React.FC = () => {
           <ul className="space-y-4 text-gray-400">
             <li>
               <Link 
-                href="/help" 
+                href="/contact" 
                 className="hover:text-white transition-colors inline-block"
                 aria-label="Centre d&apos;aide"
               >
@@ -165,25 +165,16 @@ export const Footer: React.FC = () => {
             </li>
             <li>
               <Link 
-                href="/security" 
+                href="/faq" 
                 className="hover:text-white transition-colors inline-block"
-                aria-label="Sécurité"
+                aria-label="Faq"
               >
-                Sécurité
+                Faq
               </Link>
             </li>
             <li>
               <Link 
-                href="/cancellation" 
-                className="hover:text-white transition-colors inline-block"
-                aria-label="Règles d&apos;annulation"
-              >
-                Règles d&apos;annulation
-              </Link>
-            </li>
-            <li>
-              <Link 
-                href="/report" 
+                href="/contact" 
                 className="hover:text-white transition-colors inline-block"
                 aria-label="Signaler un problème"
               >
@@ -196,15 +187,15 @@ export const Footer: React.FC = () => {
         {/* Contact */}
         <div>
           <h4 className="font-bold text-lg mb-6">Contact</h4>
-          <ul className="space-y-4 text-gray-400 flex flex-col items-center md:items-start">
+          <ul className="space-y-4 text-gray-400 flex flex-col  md:items-start">
             <li className="flex items-center gap-3">
               <Mail className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
               <a 
-                href="mailto:hello@immobenin.com" 
+                href="mailto:immobenin@gmail.com" 
                 className="hover:text-white transition-colors"
-                aria-label="Envoyer un email à hello@immobenin.com"
+                aria-label="Envoyer un email à immobenin@gmail.com"
               >
-                hello@immobenin.com
+                immobenin@gmail.com
               </a>
             </li>
             <li className="flex items-center gap-3">
@@ -219,7 +210,7 @@ export const Footer: React.FC = () => {
             </li>
             <li className="flex items-center gap-3">
               <MapPin className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
-              <span>Cotonou, Haie Vive</span>
+              <span>Cotonou, Fidjrossè</span>
             </li>
           </ul>
         </div>
