@@ -17,7 +17,7 @@ const testimonials: Testimonial[] = [
     id: 2,
     name: "Marc K.",
     role: "Propriétaire à Calavi",
-    content: "ImmoBenin m'a permis de rentabiliser ma villa quand je ne suis pas là. Les paiements par Mobile Money sont un vrai plus.",
+    content: "ImmoBenin m'a permis de rentabiliser ma villa quand je ne suis pas là.",
     avatar: "https://picsum.photos/100/100?random=21",
     rating: 5
   },

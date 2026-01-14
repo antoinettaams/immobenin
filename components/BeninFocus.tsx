@@ -5,10 +5,9 @@ import { MapPin } from 'lucide-react';
 
 const cities = [
   { name: "Cotonou", top: "85%", left: "60%" },
-  { name: "Porto-Novo", top: "84%", left: "68%" },
-  { name: "Abomey-Calavi", top: "82%", left: "58%" },
-  { name: "Parakou", top: "45%", left: "55%" },
-  { name: "Natitingou", top: "25%", left: "30%" }
+  { name: "Porto-Novo", top: "60%", left: "60%" },
+  { name: "Abomey-Calavi", top: "25%", left: "25%" },
+  { name: "Parakou", top: "45%", left: "55%" }, 
 ] as const;
 
 export const BeninFocus: React.FC = () => {

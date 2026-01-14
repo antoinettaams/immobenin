@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { Home, Building2, PartyPopper, Trees, Umbrella, ShieldCheck, Banknote, MapPin, HeartHandshake } from 'lucide-react';
+import { Home, Building2, PartyPopper, Trees, Umbrella, ShieldCheck, MessageCircle, MapPin, HeartHandshake } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -102,10 +102,10 @@ export const ValuePropSection: React.FC = () => {
       title: "Pensé pour le Bénin", 
       desc: "Une plateforme qui comprend les réalités locales de Cotonou à Parakou." 
     },
-    { 
-      icon: Banknote, 
-      title: "Paiements Adaptés", 
-      desc: "Mobile Money (MTN, Moov), Cartes bancaires et virements sécurisés." 
+    {
+      icon: MessageCircle,
+      title: "Réservation WhatsApp",
+    desc: "Contact direct avec le propriétaire. Réservez rapidement, négociez en toute transparence."
     },
     { 
       icon: ShieldCheck, 

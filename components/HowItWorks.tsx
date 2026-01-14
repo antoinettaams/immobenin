@@ -17,7 +17,7 @@ export const HowItWorks: React.FC = () => {
       { 
         icon: MousePointerClick, 
         title: "Réservez", 
-        desc: "Envoyez une demande et payez en sécurité.",
+        desc: "Discutez par WhatsApp et payez en sécurité.",
         color: "text-green-600"
       },
       { 
@@ -37,13 +37,13 @@ export const HowItWorks: React.FC = () => {
       { 
         icon: MessageCircle, 
         title: "Échangez", 
-        desc: "Recevez des demandes et validez les profils.",
+        desc: "Recevez des messages de réservations.",
         color: "text-cyan-600"
       },
       { 
         icon: Wallet, 
         title: "Encaissez", 
-        desc: "Recevez vos paiements automatiquement.",
+        desc: "Recevez vos paiements de manière sécurisée.",
         color: "text-emerald-600"
       }
     ]
@@ -168,21 +168,6 @@ export const HowItWorks: React.FC = () => {
                 </motion.article>
               );
             })}
-          </div>
-        </div>
-
-        {/* Indicateur de progression (mobile) */}
-        <div className="md:hidden mt-8">
-          <div className="flex justify-center gap-2">
-            {[0, 1, 2].map((index) => (
-              <div 
-                key={index}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  index === 0 ? 'bg-brand' : 'bg-gray-300'
-                }`}
-                aria-hidden="true"
-              />
-            ))}
           </div>
         </div>
       </div>
