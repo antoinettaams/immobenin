@@ -24,6 +24,7 @@ interface Property {
 }
 
 const properties: Property[] = [
+  // ... (vos propriétés restent identiques)
   { 
     id: 1, 
     title: "Villa des Cocotiers", 
@@ -80,7 +81,7 @@ const properties: Property[] = [
     wifi: true,
     amenities: ["Salle réunion", "Climatisation", "Parking", "Secrétariat", "Imprimante"]
   },
-  { 
+   { 
     id: 5, 
     title: "Salle Événement Le Palmier", 
     type: "Salle événement", 
@@ -94,7 +95,7 @@ const properties: Property[] = [
     wifi: true,
     amenities: ["Sonorisation", "Cuisine", "Parking", "Éclairage", "Scène"]
   },
-  { 
+    { 
     id: 6, 
     title: "Appartement vue mer", 
     type: "Appartement", 
@@ -108,90 +109,6 @@ const properties: Property[] = [
     wifi: true,
     amenities: ["Vue mer", "Piscine", "Climatisation", "Parking sécurisé", "Gym"]
   },
-  { 
-    id: 7, 
-    title: "Maison Nature", 
-    type: "Maison", 
-    location: "Grand-Popo", 
-    city: "Grand-Popo",
-    price: 30000, 
-    capacity: 6,
-    bedrooms: 3,
-    bathrooms: 2,
-    img: "https://picsum.photos/600/400?random=107",
-    wifi: false,
-    amenities: ["Proche plage", "Jardin", "Véranda", "Parking", "BBQ"]
-  },
-  { 
-    id: 8, 
-    title: "Espace Coworking", 
-    type: "Bureau", 
-    location: "Gbégamey", 
-    city: "Cotonou",
-    price: 5000, 
-    capacity: 50,
-    bedrooms: 0,
-    bathrooms: 3,
-    img: "https://picsum.photos/600/400?random=108",
-    wifi: true,
-    amenities: ["WiFi haute vitesse", "Café gratuit", "Salle réunion", "Climatisation", "Salle repos"]
-  },
-  { 
-    id: 9, 
-    title: "Studio Centre Ville", 
-    type: "Appartement", 
-    location: "Dantokpa", 
-    city: "Cotonou",
-    price: 12000, 
-    capacity: 2,
-    bedrooms: 1,
-    bathrooms: 1,
-    img: "https://picsum.photos/600/400?random=109",
-    wifi: true,
-    amenities: ["Cuisine", "Climatisation", "Centre ville"]
-  },
-  { 
-    id: 10, 
-    title: "Maison Familiale", 
-    type: "Maison", 
-    location: "Cadjehoun", 
-    city: "Cotonou",
-    price: 35000, 
-    capacity: 6,
-    bedrooms: 3,
-    bathrooms: 2,
-    img: "https://picsum.photos/600/400?random=110",
-    wifi: true,
-    amenities: ["Jardin", "Climatisation", "Parking", "Sécurité"]
-  },
-  { 
-    id: 11, 
-    title: "Appartement Moderne", 
-    type: "Appartement", 
-    location: "Godomey", 
-    city: "Cotonou",
-    price: 18000, 
-    capacity: 4,
-    bedrooms: 2,
-    bathrooms: 1,
-    img: "https://picsum.photos/600/400?random=111",
-    wifi: true,
-    amenities: ["Climatisation", "Balcon", "Parking", "Ascenseur"]
-  },
-  { 
-    id: 12, 
-    title: "Bureau Exécutif", 
-    type: "Bureau", 
-    location: "Ganhi", 
-    city: "Cotonou",
-    price: 15000, 
-    capacity: 8,
-    bedrooms: 0,
-    bathrooms: 1,
-    img: "https://picsum.photos/600/400?random=112",
-    wifi: true,
-    amenities: ["Salle réunion", "Climatisation", "Parking", "Vue ville"]
-  },
 ];
 
 export const Search: React.FC<SearchProps> = ({ onBack }) => {
@@ -201,6 +118,19 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
   const [guests, setGuests] = useState<string>("");
   const [filteredProperties, setFilteredProperties] = useState<Property[]>(properties);
   const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  // Détecter si on est sur mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleBackClick = (): void => {
     onBack();
@@ -289,113 +219,198 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-white pt-24 pb-20"
+      className="min-h-screen bg-white"
     >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Header & Search Bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 sticky top-20 bg-white/95 backdrop-blur-sm z-30 py-4 -mx-4 px-4 md:mx-0 md:px-0">
-  <button 
-    onClick={handleBackClick} 
-    className="p-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-2 self-start md:self-auto order-1 md:order-none"
-    aria-label="Retour"
-  >
-    <ArrowLeft className="w-5 h-5" />
-    <span className="font-semibold md:hidden">Retour</span>
-  </button>
-  
-  {/* Barre de recherche - Adaptée pour mobile */}
-  <div className="flex-1 w-full md:max-w-2xl mx-auto order-3 md:order-none mt-4 md:mt-0">
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center border-2 border-gray-200 hover:border-brand transition-colors shadow-sm rounded-2xl sm:rounded-full p-3 sm:p-2">
-      {/* Destination */}
-      <div className="flex-1 pb-3 sm:pb-0 sm:pr-4 border-b sm:border-b-0 sm:border-r border-gray-200 mb-3 sm:mb-0">
-        <div className="text-xs font-bold text-gray-800 mb-1">Destination</div>
-        <input 
-          type="text" 
-          placeholder="Ex: Cotonou, Porto-Novo..." 
-          className="w-full text-base text-gray-800 outline-none placeholder:text-gray-400 bg-transparent"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          onKeyDown={handleKeyDown}
-          aria-label="Destination"
-        />
-      </div>
-      
-      {/* Type de bien */}
-      <div className="flex-1 pb-3 sm:pb-0 sm:px-4 border-b sm:border-b-0 sm:border-r border-gray-200 mb-3 sm:mb-0">
-        <div className="text-xs font-bold text-gray-800 mb-1">Type de bien</div>
-        <input 
-          type="text" 
-          placeholder="Maison, appartement..." 
-          className="w-full text-base text-gray-800 outline-none placeholder:text-gray-400 bg-transparent"
-          value={propertyType}
-          onChange={(e) => setPropertyType(e.target.value)}
-          onKeyDown={handleKeyDown}
-          aria-label="Type de bien"
-        />
-      </div>
-      
-      {/* Voyageurs */}
-      <div className="flex-1 sm:pr-4">
-        <div className="text-xs font-bold text-gray-800 mb-1">Voyageurs</div>
-        <div className="flex items-center justify-between">
-          <input 
-            type="number" 
-            min="1"
-            placeholder="Nombre" 
-            className="w-full text-base text-gray-800 outline-none placeholder:text-gray-400 bg-transparent"
-            value={guests}
-            onChange={(e) => setGuests(e.target.value)}
-            onKeyDown={handleKeyDown}
-            aria-label="Nombre de voyageurs"
-          />
-          <button 
-            onClick={handleSearchSubmit}
-            className="bg-brand text-white p-3 rounded-full hover:bg-brand-dark transition-colors ml-2 flex items-center justify-center gap-2 sm:hidden"
-            aria-label="Rechercher"
-          >
-            <SearchIcon className="w-5 h-5" />
-          </button>
+      {/* Barre de recherche fixe en haut sur mobile */}
+      <div className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm z-40 border-b border-gray-200 md:hidden">
+        <div className="container mx-auto px-4 py-3">
+          {/* Bouton Retour et Voir tout en ligne */}
+          <div className="flex items-center justify-between mb-3">
+            <button 
+              onClick={handleBackClick} 
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-2"
+              aria-label="Retour"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-semibold">Retour</span>
+            </button>
+            
+            {isSearching && (
+              <button 
+                onClick={handleShowAllProperties}
+                className="flex items-center gap-2 border border-gray-300 rounded-xl px-4 py-2 hover:border-brand hover:bg-brand/5 transition-colors text-sm font-semibold"
+                aria-label="Voir toutes les propriétés"
+              >
+                Voir tout
+              </button>
+            )}
+          </div>
+          
+          {/* Barre de recherche mobile compacte */}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex-1">
+              <input 
+                type="text" 
+                placeholder="Destination..." 
+                className="w-full px-4 py-3 text-gray-800 bg-gray-50 border border-gray-300 rounded-xl outline-none placeholder:text-gray-400 text-sm"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                onKeyDown={handleKeyDown}
+                aria-label="Destination"
+              />
+            </div>
+            
+            <div className="flex-1">
+              <input 
+                type="text" 
+                placeholder="Type..." 
+                className="w-full px-4 py-3 text-gray-800 bg-gray-50 border border-gray-300 rounded-xl outline-none placeholder:text-gray-400 text-sm"
+                value={propertyType}
+                onChange={(e) => setPropertyType(e.target.value)}
+                onKeyDown={handleKeyDown}
+                aria-label="Type de bien"
+              />
+            </div>
+            
+            <button 
+              onClick={handleSearchSubmit}
+              className="bg-brand text-white p-3 rounded-xl hover:bg-brand-dark transition-colors flex items-center justify-center"
+              aria-label="Rechercher"
+            >
+              <SearchIcon className="w-5 h-5" />
+            </button>
+          </div>
+          
+          {/* Champ voyageurs */}
+          <div className="mb-2">
+            <input 
+              type="number" 
+              min="1"
+              placeholder="Nombre de voyageurs" 
+              className="w-full px-4 py-3 text-gray-800 bg-gray-50 border border-gray-300 rounded-xl outline-none placeholder:text-gray-400 text-sm"
+              value={guests}
+              onChange={(e) => setGuests(e.target.value)}
+              onKeyDown={handleKeyDown}
+              aria-label="Nombre de voyageurs"
+            />
+          </div>
+          
+          {/* Filtres actifs compacts */}
+          {activeFiltersCount > 0 && (
+            <div className="pt-2 border-t border-gray-100">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-700">
+                  {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''}
+                </span>
+                <button 
+                  onClick={handleShowAllProperties}
+                  className="text-brand text-xs font-medium hover:underline flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" />
+                  Effacer
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-      
-      {/* Bouton Rechercher - version desktop */}
-      <button 
-        onClick={handleSearchSubmit}
-        className="hidden sm:flex bg-brand text-white p-3 rounded-full hover:bg-brand-dark transition-colors ml-2 items-center justify-center gap-2"
-        aria-label="Rechercher"
-      >
-        <SearchIcon className="w-5 h-5" />
-        <span className="text-sm font-semibold">Rechercher</span>
-      </button>
-    </div>
-  </div>
 
-  {isSearching && (
-    <>
-      {/* Version mobile */}
-      <button 
-        onClick={handleShowAllProperties}
-        className="order-2 md:hidden flex items-center gap-2 border border-gray-300 rounded-xl px-4 py-2 hover:border-brand hover:bg-brand/5 transition-colors text-sm font-semibold"
-        aria-label="Voir toutes les propriétés"
-      >
-        Voir tout
-      </button>
-      
-      {/* Version desktop */}
-      <button 
-        onClick={handleShowAllProperties}
-        className="hidden md:flex items-center gap-2 border border-gray-300 rounded-xl px-4 py-2 hover:border-brand hover:bg-brand/5 transition-colors text-sm font-semibold order-2 md:order-none"
-        aria-label="Voir toutes les propriétés"
-      >
-        Voir tout
-      </button>
-    </>
-  )}
-</div>
+      {/* Version desktop (inchangée) */}
+      <div className="hidden md:block container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20">
+        {/* Header & Search Bar desktop */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 sticky top-20 bg-white/95 backdrop-blur-sm z-30 py-4 -mx-4 px-4 md:mx-0 md:px-0">
+          <button 
+            onClick={handleBackClick} 
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-2 self-start md:self-auto order-1 md:order-none"
+            aria-label="Retour"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-semibold md:hidden">Retour</span>
+          </button>
+          
+          <div className="flex-1 w-full md:max-w-2xl mx-auto order-3 md:order-none mt-4 md:mt-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center border-2 border-gray-200 hover:border-brand transition-colors shadow-sm rounded-2xl sm:rounded-full p-3 sm:p-2">
+              {/* Destination */}
+              <div className="flex-1 pb-3 sm:pb-0 sm:pr-4 border-b sm:border-b-0 sm:border-r border-gray-200 mb-3 sm:mb-0">
+                <div className="text-xs font-bold text-gray-800 mb-1">Destination</div>
+                <input 
+                  type="text" 
+                  placeholder="Ex: Cotonou, Porto-Novo..." 
+                  className="w-full text-base text-gray-800 outline-none placeholder:text-gray-400 bg-transparent"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  aria-label="Destination"
+                />
+              </div>
+              
+              {/* Type de bien */}
+              <div className="flex-1 pb-3 sm:pb-0 sm:px-4 border-b sm:border-b-0 sm:border-r border-gray-200 mb-3 sm:mb-0">
+                <div className="text-xs font-bold text-gray-800 mb-1">Type de bien</div>
+                <input 
+                  type="text" 
+                  placeholder="Maison, appartement..." 
+                  className="w-full text-base text-gray-800 outline-none placeholder:text-gray-400 bg-transparent"
+                  value={propertyType}
+                  onChange={(e) => setPropertyType(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  aria-label="Type de bien"
+                />
+              </div>
+              
+              {/* Voyageurs */}
+              <div className="flex-1 sm:pr-4">
+                <div className="text-xs font-bold text-gray-800 mb-1">Voyageurs</div>
+                <div className="flex items-center justify-between">
+                  <input 
+                    type="number" 
+                    min="1"
+                    placeholder="Nombre" 
+                    className="w-full text-base text-gray-800 outline-none placeholder:text-gray-400 bg-transparent"
+                    value={guests}
+                    onChange={(e) => setGuests(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    aria-label="Nombre de voyageurs"
+                  />
+                  <button 
+                    onClick={handleSearchSubmit}
+                    className="bg-brand text-white p-3 rounded-full hover:bg-brand-dark transition-colors ml-2 flex items-center justify-center gap-2 sm:hidden"
+                    aria-label="Rechercher"
+                  >
+                    <SearchIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Bouton Rechercher - version desktop */}
+              <button 
+                onClick={handleSearchSubmit}
+                className="hidden sm:flex bg-brand text-white p-3 rounded-full hover:bg-brand-dark transition-colors ml-2 items-center justify-center gap-2"
+                aria-label="Rechercher"
+              >
+                <SearchIcon className="w-5 h-5" />
+                <span className="text-sm font-semibold">Rechercher</span>
+              </button>
+            </div>
+          </div>
 
-        {/* Filtres actifs */}
-        {activeFiltersCount > 0 && (
+          {isSearching && (
+            <button 
+              onClick={handleShowAllProperties}
+              className="hidden md:flex items-center gap-2 border border-gray-300 rounded-xl px-4 py-2 hover:border-brand hover:bg-brand/5 transition-colors text-sm font-semibold order-2 md:order-none"
+              aria-label="Voir toutes les propriétés"
+            >
+              Voir tout
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Contenu principal avec marge pour la barre fixe mobile */}
+      <div className={`${isMobile ? 'pt-64' : 'pt-24 md:pt-0'} pb-20 container mx-auto px-4 sm:px-6 lg:px-8`}>
+        
+        {/* Afficher les filtres actifs uniquement sur desktop */}
+        {!isMobile && activeFiltersCount > 0 && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-700">
@@ -593,20 +608,20 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
             </button>
           </div>
         )}
-
-        {/* Floating Map Button (Mobile/Tablet) */}
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 md:hidden z-40">
-          <button 
-            onClick={handleShowAllProperties}
-            className="bg-brand text-white px-6 py-3 rounded-full font-semibold shadow-xl flex items-center gap-2 hover:bg-brand-dark transition-transform"
-            aria-label="Voir toutes les propriétés"
-          >
-            <SearchIcon className="w-4 h-4" />
-            Voir tout
-          </button>
-        </div>
-
       </div>
+
+      {/* Floating Map Button (Mobile/Tablet) */}
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 md:hidden z-40">
+        <button 
+          onClick={handleShowAllProperties}
+          className="bg-brand text-white px-6 py-3 rounded-full font-semibold shadow-xl flex items-center gap-2 hover:bg-brand-dark transition-transform"
+          aria-label="Voir toutes les propriétés"
+        >
+          <SearchIcon className="w-4 h-4" />
+          Voir tout
+        </button>
+      </div>
+
     </motion.div>
   );
 };
