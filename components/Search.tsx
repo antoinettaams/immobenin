@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Search as SearchIcon, Map, Wifi, Home, Building2, Calendar, Users, Bath, Bed, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Search as SearchIcon, Map, Wifi, Home, Building2, Calendar, Users, Bath, Bed, X, Star, Heart, Share2, Phone, Mail, User, Clock, Shield, Check, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SearchProps {
@@ -24,7 +24,6 @@ interface Property {
 }
 
 const properties: Property[] = [
-  // ... (vos propriétés restent identiques)
   { 
     id: 1, 
     title: "Villa des Cocotiers", 
@@ -81,7 +80,7 @@ const properties: Property[] = [
     wifi: true,
     amenities: ["Salle réunion", "Climatisation", "Parking", "Secrétariat", "Imprimante"]
   },
-   { 
+  { 
     id: 5, 
     title: "Salle Événement Le Palmier", 
     type: "Salle événement", 
@@ -95,7 +94,7 @@ const properties: Property[] = [
     wifi: true,
     amenities: ["Sonorisation", "Cuisine", "Parking", "Éclairage", "Scène"]
   },
-    { 
+  { 
     id: 6, 
     title: "Appartement vue mer", 
     type: "Appartement", 
@@ -119,6 +118,12 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
   const [filteredProperties, setFilteredProperties] = useState<Property[]>(properties);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
+
+  // Numéro WhatsApp (à modifier plus tard avec votre vrai numéro)
+  const whatsappNumber = "229XXXXXXXX"; // Remplacez XXXXXXXXX par votre numéro réel
+  const whatsappMessage = (property: Property) => `Bonjour ! Je suis intéressé(e) par la réservation de "${property.title}" à ${property.location}, ${property.city} pour ${property.capacity} personne(s). Prix : ${property.price.toLocaleString("fr-FR")} FCFA/nuit. Pouvez-vous me donner plus d'informations ?`;
 
   // Détecter si on est sur mobile
   useEffect(() => {
@@ -136,9 +141,32 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
     onBack();
   };
 
-  const handleReserveClick = (propertyId: number, e: React.MouseEvent): void => {
+  const handlePropertyClick = (property: Property): void => {
+    setSelectedProperty(property);
+    setCurrentImageIndex(0);
+    // Empêcher le défilement du body quand la modale est ouverte
+    document.body.style.overflow = 'hidden';
+  };
+
+  const handleCloseModal = (): void => {
+    setSelectedProperty(null);
+    document.body.style.overflow = 'auto';
+  };
+
+  const handleWhatsAppReservation = (property: Property, e: React.MouseEvent): void => {
     e.stopPropagation();
-    router.push(`/property/${propertyId}`);
+    
+    // Encode le message pour l'URL
+    const encodedMessage = encodeURIComponent(whatsappMessage(property));
+    
+    // Crée l'URL WhatsApp
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+    
+    // Ouvre WhatsApp dans un nouvel onglet
+    window.open(whatsappUrl, '_blank');
+    
+    // Ferme la modale après redirection
+    handleCloseModal();
   };
 
   const handleSearchSubmit = (): void => {
@@ -213,6 +241,22 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
     propertyType.trim(), 
     guests.trim()
   ].filter(Boolean).length;
+
+  // Simuler d'autres images pour la galerie
+  const propertyImages = selectedProperty ? [
+    selectedProperty.img,
+    `https://picsum.photos/600/400?random=${selectedProperty.id + 100}`,
+    `https://picsum.photos/600/400?random=${selectedProperty.id + 200}`,
+    `https://picsum.photos/600/400?random=${selectedProperty.id + 300}`
+  ] : [];
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % propertyImages.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + propertyImages.length) % propertyImages.length);
+  };
 
   return (
     <motion.div 
@@ -485,9 +529,10 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
               className="group cursor-pointer border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
               role="button"
               tabIndex={0}
+              onClick={() => handlePropertyClick(property)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
-                  handleReserveClick(property.id, e as any);
+                  handlePropertyClick(property);
                 }
               }}
               aria-label={`Voir ${property.title} à ${property.location}`}
@@ -577,7 +622,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                   </div>
                   
                   <button 
-                    onClick={(e) => handleReserveClick(property.id, e)}
+                    onClick={(e) => handleWhatsAppReservation(property, e)}
                     className="text-brand font-semibold text-sm hover:text-brand-dark transition-colors"
                     aria-label={`Réserver ${property.title}`}
                   >
@@ -621,6 +666,214 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
           Voir tout
         </button>
       </div>
+
+      {/* Modale pour afficher les détails du profil */}
+      <AnimatePresence>
+        {selectedProperty && (
+          <>
+            {/* Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              onClick={handleCloseModal}
+            />
+            
+            {/* Modale */}
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="fixed inset-4 md:inset-20 bg-white rounded-2xl md:rounded-3xl shadow-2xl z-50 overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header de la modale */}
+              <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleCloseModal}
+                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                    aria-label="Fermer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <h2 className="text-lg md:text-xl font-bold text-gray-900">
+                    Détails du bien
+                  </h2>
+                </div>
+              </div>
+              
+              {/* Contenu scrollable */}
+              <div className="flex-1 overflow-y-auto">
+                {/* Galerie d'images */}
+                <div className="relative aspect-video bg-gray-200 overflow-hidden">
+                  <img
+                    src={propertyImages[currentImageIndex]}
+                    alt={selectedProperty.title}
+                    className="w-full h-full object-cover"
+                  />
+                  
+                  {/* Boutons de navigation galerie */}
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors"
+                    aria-label="Image précédente"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors"
+                    aria-label="Image suivante"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                  
+                  {/* Indicateurs d'images */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                    {propertyImages.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          index === currentImageIndex 
+                            ? 'bg-white w-8' 
+                            : 'bg-white/50 hover:bg-white/80'
+                        }`}
+                        aria-label={`Aller à l'image ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                  
+                  {/* Badge type */}
+                  <div className="absolute top-4 right-4 bg-white/90 px-3 py-1.5 rounded-full text-sm font-semibold">
+                    {selectedProperty.type}
+                  </div>
+                </div>
+                
+                {/* Contenu principal */}
+                <div className="p-4 md:p-6">
+                  {/* Titre et localisation */}
+                  <div className="mb-6">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                      {selectedProperty.title}
+                    </h1>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Map className="w-5 h-5" />
+                      <span className="text-lg">
+                        {selectedProperty.location}, {selectedProperty.city}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Prix et notation */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 p-4 bg-gray-50 rounded-xl">
+                    <div>
+                      <div className="text-2xl md:text-3xl font-bold text-gray-900">
+                        {selectedProperty.price.toLocaleString("fr-FR")} FCFA
+                        <span className="text-gray-600 text-lg ml-2">/nuit</span>
+                      </div>
+                      <div className="text-gray-600">Taxes et frais inclus</div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={(e) => handleWhatsAppReservation(selectedProperty, e)}
+                        className="bg-brand text-white px-6 py-3 rounded-xl font-semibold hover:bg-brand-dark transition-colors flex items-center gap-2"
+                      >
+                        <Phone className="w-5 h-5" />
+                        Réserver sur WhatsApp
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Caractéristiques principales */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
+                      <Users className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+                      <div className="text-sm text-gray-600">Voyageurs</div>
+                      <div className="text-lg font-bold">{selectedProperty.capacity} pers.</div>
+                    </div>
+                    
+                    {selectedProperty.bedrooms > 0 && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
+                        <Bed className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+                        <div className="text-sm text-gray-600">Chambres</div>
+                        <div className="text-lg font-bold">{selectedProperty.bedrooms}</div>
+                      </div>
+                    )}
+                    
+                    {selectedProperty.bathrooms > 0 && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
+                        <Bath className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+                        <div className="text-sm text-gray-600">Salles de bain</div>
+                        <div className="text-lg font-bold">{selectedProperty.bathrooms}</div>
+                      </div>
+                    )}
+                    
+                    <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
+                      <Wifi className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+                      <div className="text-sm text-gray-600">WiFi</div>
+                      <div className="text-lg font-bold">{selectedProperty.wifi ? "Oui" : "Non"}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Description */}
+                  <div className="mb-8">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">Description</h3>
+                    <p className="text-gray-700 leading-relaxed">
+                      {selectedProperty.title} est un magnifique {selectedProperty.type.toLowerCase()} situé à {selectedProperty.location}, {selectedProperty.city}. 
+                      Ce bien offre un espace spacieux et confortable pouvant accueillir jusqu'à {selectedProperty.capacity} personnes. 
+                      Idéal pour les familles, les groupes d'amis ou les voyages d'affaires.
+                    </p>
+                  </div>
+                  
+                  {/* Équipements et services */}
+                  <div className="mb-8">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">Équipements et services</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {selectedProperty.amenities.map((amenity, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Check className="w-5 h-5 text-green-500" />
+                          <span className="text-gray-700">{amenity}</span>
+                        </div>
+                      ))}
+                      {selectedProperty.wifi && (
+                        <div className="flex items-center gap-2">
+                          <Check className="w-5 h-5 text-green-500" />
+                          <span className="text-gray-700">WiFi haute vitesse</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Bouton de réservation principal */}
+                  <div className="sticky bottom-0 bg-white pt-4 pb-4 border-t border-gray-200 -mx-4 md:-mx-6 px-4 md:px-6">
+                    <button 
+                      onClick={(e) => handleWhatsAppReservation(selectedProperty, e)}
+                      className=" bg-brand text-white px-6 py-3 rounded-xl font-semibold hover:bg-brand-dark transition-colors flex items-center justify-center gap-2 text-lg"
+                    >
+                      <Phone className="w-6 h-6" />
+                      Réserver sur WhatsApp
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Bouton de fermeture mobile */}
+              <div className="md:hidden p-4 border-t border-gray-200">
+                <button
+                  onClick={handleCloseModal}
+                  className="w-full py-3 bg-gray-100 text-gray-800 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
     </motion.div>
   );
