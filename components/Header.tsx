@@ -98,6 +98,14 @@ export const Header: React.FC = () => {
           >
             Devenir hôte
           </Link>
+          <Link 
+            href="contact" 
+            className={`hover:text-brand transition-colors ${isActive('/publcontactish') ? 'text-brand font-semibold' : ''}`}
+            onClick={handleNavClick}
+            aria-current={isActive('/contact') ? 'page' : undefined}
+          >
+            Contact
+          </Link>
         </nav>
 
         {/* Right Section (User Menu on Desktop / Toggle on Mobile) */}
@@ -175,6 +183,14 @@ export const Header: React.FC = () => {
               >
                 Devenir hôte
               </Link>
+              <Link 
+                href="contact" 
+                className={`hover:text-brand transition-colors ${isActive('/publcontactish') ? 'text-brand font-semibold' : ''}`}
+                onClick={handleNavClick}
+                aria-current={isActive('/contact') ? 'page' : undefined}
+              >
+                Contact
+              </Link>
               <hr className="border-gray-100" />
               <div className="flex   gap-6 pt-2">
                  <button 
@@ -183,13 +199,6 @@ export const Header: React.FC = () => {
                    aria-label="Changer la langue"
                  >
                     <Globe className="w-4 h-4" /> FR
-                 </button>
-                 <button 
-                   className="flex items-center gap-2 text-sm text-gray-500"
-                   type="button"
-                   aria-label="Se connecter"
-                 >
-                    <UserCircle className="w-5 h-5" /> Connexion
                  </button>
               </div>
             </nav>
