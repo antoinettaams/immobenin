@@ -253,7 +253,7 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Copyright */}
-        <div className="pt-6 md:pt-8 text-gray-500 text-xs md:text-sm">
+        <div className="pt-6 md:pt-8 text-gray-500 text-xs md:text-sm text-center">
           <p>&copy; {currentYear} ImmoBenin. Tous droits réservés.</p>
         </div>
       </div>

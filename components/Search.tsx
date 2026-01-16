@@ -1,7 +1,8 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Heart, Star, Map, SlidersHorizontal, Filter } from 'lucide-react';
+import { ArrowLeft, Search as SearchIcon, Map, Wifi, Home, Building2, Calendar, Users, Bath, Bed, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface SearchProps {
   onBack: () => void;  
@@ -12,61 +13,276 @@ interface Property {
   title: string;
   type: string;
   location: string;
+  city: string;
   price: number;
-  rating: number;
-  reviews: number;
+  capacity: number;
+  bedrooms: number;
+  bathrooms: number;
   img: string;
+  wifi: boolean;
+  amenities: string[];
 }
 
 const properties: Property[] = [
-  { id: 1, title: "Villa des Cocotiers", type: "Villa", location: "Cotonou, Haie Vive", price: 45000, rating: 4.8, reviews: 124, img: "https://picsum.photos/600/400?random=101" },
-  { id: 2, title: "Studio Moderne", type: "Appartement", location: "Abomey-Calavi", price: 15000, rating: 4.5, reviews: 45, img: "https://picsum.photos/600/400?random=102" },
-  { id: 3, title: "Loft Artistique", type: "Loft", location: "Porto-Novo", price: 25000, rating: 4.9, reviews: 89, img: "https://picsum.photos/600/400?random=103" },
-  { id: 4, title: "Chambre Cosy", type: "Chambre", location: "Cotonou, Fidjrossè", price: 10000, rating: 4.3, reviews: 22, img: "https://picsum.photos/600/400?random=104" },
-  { id: 5, title: "Résidence le Palmier", type: "Maison entière", location: "Ouidah", price: 60000, rating: 4.95, reviews: 210, img: "https://picsum.photos/600/400?random=105" },
-  { id: 6, title: "Appartement vue mer", type: "Appartement", location: "Cotonou, Zone des Ambassades", price: 80000, rating: 5.0, reviews: 56, img: "https://picsum.photos/600/400?random=106" },
-  { id: 7, title: "Bungalow Nature", type: "Bungalow", location: "Grand-Popo", price: 30000, rating: 4.7, reviews: 78, img: "https://picsum.photos/600/400?random=107" },
-  { id: 8, title: "Espace Coworking", type: "Bureau", location: "Cotonou, Gbégamey", price: 5000, rating: 4.6, reviews: 34, img: "https://picsum.photos/600/400?random=108" },
+  { 
+    id: 1, 
+    title: "Villa des Cocotiers", 
+    type: "Maison", 
+    location: "Haie Vive", 
+    city: "Cotonou",
+    price: 45000, 
+    capacity: 8,
+    bedrooms: 4,
+    bathrooms: 3,
+    img: "https://picsum.photos/600/400?random=101",
+    wifi: true,
+    amenities: ["Piscine", "Climatisation", "Parking", "Jardin", "Cuisine équipée"]
+  },
+  { 
+    id: 2, 
+    title: "Studio Moderne", 
+    type: "Appartement", 
+    location: "Abomey-Calavi", 
+    city: "Abomey-Calavi",
+    price: 15000, 
+    capacity: 2,
+    bedrooms: 1,
+    bathrooms: 1,
+    img: "https://picsum.photos/600/400?random=102",
+    wifi: true,
+    amenities: ["Cuisine équipée", "Climatisation", "Ascenseur", "Balcon"]
+  },
+  { 
+    id: 3, 
+    title: "Loft Artistique", 
+    type: "Appartement", 
+    location: "Porto-Novo", 
+    city: "Porto-Novo",
+    price: 25000, 
+    capacity: 4,
+    bedrooms: 2,
+    bathrooms: 1,
+    img: "https://picsum.photos/600/400?random=103",
+    wifi: true,
+    amenities: ["Terrasse", "Climatisation", "Parking", "Cuisine américaine"]
+  },
+  { 
+    id: 4, 
+    title: "Bureau d'affaires", 
+    type: "Bureau", 
+    location: "Fidjrossè", 
+    city: "Cotonou",
+    price: 10000, 
+    capacity: 10,
+    bedrooms: 0,
+    bathrooms: 2,
+    img: "https://picsum.photos/600/400?random=104",
+    wifi: true,
+    amenities: ["Salle réunion", "Climatisation", "Parking", "Secrétariat", "Imprimante"]
+  },
+  { 
+    id: 5, 
+    title: "Salle Événement Le Palmier", 
+    type: "Salle événement", 
+    location: "Ouidah", 
+    city: "Ouidah",
+    price: 60000, 
+    capacity: 200,
+    bedrooms: 0,
+    bathrooms: 5,
+    img: "https://picsum.photos/600/400?random=105",
+    wifi: true,
+    amenities: ["Sonorisation", "Cuisine", "Parking", "Éclairage", "Scène"]
+  },
+  { 
+    id: 6, 
+    title: "Appartement vue mer", 
+    type: "Appartement", 
+    location: "Zone des Ambassades", 
+    city: "Cotonou",
+    price: 80000, 
+    capacity: 6,
+    bedrooms: 3,
+    bathrooms: 2,
+    img: "https://picsum.photos/600/400?random=106",
+    wifi: true,
+    amenities: ["Vue mer", "Piscine", "Climatisation", "Parking sécurisé", "Gym"]
+  },
+  { 
+    id: 7, 
+    title: "Maison Nature", 
+    type: "Maison", 
+    location: "Grand-Popo", 
+    city: "Grand-Popo",
+    price: 30000, 
+    capacity: 6,
+    bedrooms: 3,
+    bathrooms: 2,
+    img: "https://picsum.photos/600/400?random=107",
+    wifi: false,
+    amenities: ["Proche plage", "Jardin", "Véranda", "Parking", "BBQ"]
+  },
+  { 
+    id: 8, 
+    title: "Espace Coworking", 
+    type: "Bureau", 
+    location: "Gbégamey", 
+    city: "Cotonou",
+    price: 5000, 
+    capacity: 50,
+    bedrooms: 0,
+    bathrooms: 3,
+    img: "https://picsum.photos/600/400?random=108",
+    wifi: true,
+    amenities: ["WiFi haute vitesse", "Café gratuit", "Salle réunion", "Climatisation", "Salle repos"]
+  },
+  { 
+    id: 9, 
+    title: "Studio Centre Ville", 
+    type: "Appartement", 
+    location: "Dantokpa", 
+    city: "Cotonou",
+    price: 12000, 
+    capacity: 2,
+    bedrooms: 1,
+    bathrooms: 1,
+    img: "https://picsum.photos/600/400?random=109",
+    wifi: true,
+    amenities: ["Cuisine", "Climatisation", "Centre ville"]
+  },
+  { 
+    id: 10, 
+    title: "Maison Familiale", 
+    type: "Maison", 
+    location: "Cadjehoun", 
+    city: "Cotonou",
+    price: 35000, 
+    capacity: 6,
+    bedrooms: 3,
+    bathrooms: 2,
+    img: "https://picsum.photos/600/400?random=110",
+    wifi: true,
+    amenities: ["Jardin", "Climatisation", "Parking", "Sécurité"]
+  },
+  { 
+    id: 11, 
+    title: "Appartement Moderne", 
+    type: "Appartement", 
+    location: "Godomey", 
+    city: "Cotonou",
+    price: 18000, 
+    capacity: 4,
+    bedrooms: 2,
+    bathrooms: 1,
+    img: "https://picsum.photos/600/400?random=111",
+    wifi: true,
+    amenities: ["Climatisation", "Balcon", "Parking", "Ascenseur"]
+  },
+  { 
+    id: 12, 
+    title: "Bureau Exécutif", 
+    type: "Bureau", 
+    location: "Ganhi", 
+    city: "Cotonou",
+    price: 15000, 
+    capacity: 8,
+    bedrooms: 0,
+    bathrooms: 1,
+    img: "https://picsum.photos/600/400?random=112",
+    wifi: true,
+    amenities: ["Salle réunion", "Climatisation", "Parking", "Vue ville"]
+  },
 ];
 
-const filters: string[] = ["Tout", "Villas", "Appartements", "Bord de mer", "Campagne", "Luxe", "Petits prix"];
-
 export const Search: React.FC<SearchProps> = ({ onBack }) => {
-  const [activeFilter, setActiveFilter] = useState<string>("Tout");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
+  const router = useRouter();
+  const [location, setLocation] = useState<string>("");
+  const [propertyType, setPropertyType] = useState<string>("");
+  const [guests, setGuests] = useState<string>("");
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>(properties);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
 
   const handleBackClick = (): void => {
     onBack();
   };
 
-  const handleFilterClick = (filter: string): void => {
-    setActiveFilter(filter);
-  };
-
-  const handlePropertyClick = (propertyId: number): void => {
-    // Ajouter ici la logique de navigation vers la page de détails
-    console.log('Property clicked:', propertyId);
-  };
-
-  const handleFavoriteClick = (e: React.MouseEvent<HTMLButtonElement>, propertyId: number): void => {
+  const handleReserveClick = (propertyId: number, e: React.MouseEvent): void => {
     e.stopPropagation();
-    // Ajouter ici la logique pour gérer les favoris
-    console.log('Favorite clicked:', propertyId);
+    router.push(`/property/${propertyId}`);
   };
 
-  const handleMapClick = (): void => {
-    // Ajouter ici la logique pour afficher la carte
-    console.log('Map button clicked');
+  const handleSearchSubmit = (): void => {
+    setIsSearching(true);
+    filterProperties();
   };
 
-  const handleFiltersClick = (): void => {
-    // Ajouter ici la logique pour ouvrir les filtres
-    console.log('Filters button clicked');
+  const handleShowAllProperties = (): void => {
+    setLocation("");
+    setPropertyType("");
+    setGuests("");
+    setFilteredProperties(properties);
+    setIsSearching(false);
   };
+
+  const filterProperties = () => {
+    let filtered = [...properties];
+
+    if (location.trim().toLowerCase() === "cotonou") {
+      filtered = filtered.filter(property => 
+        property.city.toLowerCase() === "cotonou"
+      );
+    } else if (location.trim()) {
+      filtered = filtered.filter(property =>
+        property.city.toLowerCase().includes(location.toLowerCase()) ||
+        property.location.toLowerCase().includes(location.toLowerCase())
+      );
+    }
+
+    if (propertyType.trim()) {
+      const type = propertyType.toLowerCase();
+      if (type === "appartement" || type === "appartements") {
+        filtered = filtered.filter(property => property.type === "Appartement");
+      } else if (type === "maison" || type === "maisons") {
+        filtered = filtered.filter(property => property.type === "Maison");
+      } else if (type === "bureau" || type === "bureaux") {
+        filtered = filtered.filter(property => property.type === "Bureau");
+      } else if (type === "salle" || type === "salles") {
+        filtered = filtered.filter(property => property.type === "Salle événement");
+      } else {
+        filtered = filtered.filter(property => 
+          property.type.toLowerCase().includes(type)
+        );
+      }
+    }
+
+    if (guests.trim()) {
+      const guestNumber = parseInt(guests);
+      if (!isNaN(guestNumber) && guestNumber > 0) {
+        filtered = filtered.filter(property => property.capacity >= guestNumber);
+      }
+    }
+
+    setFilteredProperties(filtered);
+  };
+
+  useEffect(() => {
+    if (location || propertyType || guests) {
+      filterProperties();
+      setIsSearching(true);
+    }
+  }, [location, propertyType, guests]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearchSubmit();
+    }
+  };
+
+  const activeFiltersCount = [
+    location.trim(), 
+    propertyType.trim(), 
+    guests.trim()
+  ].filter(Boolean).length;
 
   return (
     <motion.div 
@@ -79,138 +295,314 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
         
         {/* Header & Search Bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 sticky top-20 bg-white/95 backdrop-blur-sm z-30 py-4 -mx-4 px-4 md:mx-0 md:px-0">
+  <button 
+    onClick={handleBackClick} 
+    className="p-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-2 self-start md:self-auto order-1 md:order-none"
+    aria-label="Retour"
+  >
+    <ArrowLeft className="w-5 h-5" />
+    <span className="font-semibold md:hidden">Retour</span>
+  </button>
+  
+  {/* Barre de recherche - Adaptée pour mobile */}
+  <div className="flex-1 w-full md:max-w-2xl mx-auto order-3 md:order-none mt-4 md:mt-0">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center border-2 border-gray-200 hover:border-brand transition-colors shadow-sm rounded-2xl sm:rounded-full p-3 sm:p-2">
+      {/* Destination */}
+      <div className="flex-1 pb-3 sm:pb-0 sm:pr-4 border-b sm:border-b-0 sm:border-r border-gray-200 mb-3 sm:mb-0">
+        <div className="text-xs font-bold text-gray-800 mb-1">Destination</div>
+        <input 
+          type="text" 
+          placeholder="Ex: Cotonou, Porto-Novo..." 
+          className="w-full text-base text-gray-800 outline-none placeholder:text-gray-400 bg-transparent"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          onKeyDown={handleKeyDown}
+          aria-label="Destination"
+        />
+      </div>
+      
+      {/* Type de bien */}
+      <div className="flex-1 pb-3 sm:pb-0 sm:px-4 border-b sm:border-b-0 sm:border-r border-gray-200 mb-3 sm:mb-0">
+        <div className="text-xs font-bold text-gray-800 mb-1">Type de bien</div>
+        <input 
+          type="text" 
+          placeholder="Maison, appartement..." 
+          className="w-full text-base text-gray-800 outline-none placeholder:text-gray-400 bg-transparent"
+          value={propertyType}
+          onChange={(e) => setPropertyType(e.target.value)}
+          onKeyDown={handleKeyDown}
+          aria-label="Type de bien"
+        />
+      </div>
+      
+      {/* Voyageurs */}
+      <div className="flex-1 sm:pr-4">
+        <div className="text-xs font-bold text-gray-800 mb-1">Voyageurs</div>
+        <div className="flex items-center justify-between">
+          <input 
+            type="number" 
+            min="1"
+            placeholder="Nombre" 
+            className="w-full text-base text-gray-800 outline-none placeholder:text-gray-400 bg-transparent"
+            value={guests}
+            onChange={(e) => setGuests(e.target.value)}
+            onKeyDown={handleKeyDown}
+            aria-label="Nombre de voyageurs"
+          />
           <button 
-            onClick={handleBackClick} 
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-2 self-start md:self-auto"
-            aria-label="Retour"
+            onClick={handleSearchSubmit}
+            className="bg-brand text-white p-3 rounded-full hover:bg-brand-dark transition-colors ml-2 flex items-center justify-center gap-2 sm:hidden"
+            aria-label="Rechercher"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-semibold md:hidden">Retour</span>
-          </button>
-          
-          <div className="flex-1 w-full md:max-w-2xl">
-            <div className="flex items-center border shadow-sm hover:shadow-md transition-shadow rounded-full p-2 pl-6 gap-4">
-              <div className="flex-1 border-r border-gray-200 pr-4">
-                <div className="text-xs font-bold text-gray-800">Destination</div>
-                <input 
-                  type="text" 
-                  placeholder="Rechercher une ville..." 
-                  className="w-full text-sm text-gray-600 outline-none placeholder:text-gray-400"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  aria-label="Rechercher une ville"
-                />
-              </div>
-              <div className="hidden sm:block flex-1 border-r border-gray-200 px-4">
-                <div className="text-xs font-bold text-gray-800">Dates</div>
-                <div className="text-sm text-gray-400">Ajouter des dates</div>
-              </div>
-              <div className="hidden sm:block flex-1 px-4">
-                <div className="text-xs font-bold text-gray-800">Voyageurs</div>
-                <div className="text-sm text-gray-400">Ajouter des voyageurs</div>
-              </div>
-              <button 
-                className="bg-brand text-white p-3 rounded-full hover:opacity-90 transition-opacity"
-                aria-label="Filtres avancés"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <button 
-            onClick={handleFiltersClick}
-            className="hidden md:flex items-center gap-2 border border-gray-300 rounded-xl px-4 py-2 hover:border-gray-900 transition-colors text-sm font-semibold"
-            aria-label="Ouvrir les filtres"
-          >
-            <Filter className="w-4 h-4" /> Filtres
+            <SearchIcon className="w-5 h-5" />
           </button>
         </div>
+      </div>
+      
+      {/* Bouton Rechercher - version desktop */}
+      <button 
+        onClick={handleSearchSubmit}
+        className="hidden sm:flex bg-brand text-white p-3 rounded-full hover:bg-brand-dark transition-colors ml-2 items-center justify-center gap-2"
+        aria-label="Rechercher"
+      >
+        <SearchIcon className="w-5 h-5" />
+        <span className="text-sm font-semibold">Rechercher</span>
+      </button>
+    </div>
+  </div>
 
-        {/* Categories / Filters */}
-        <div className="flex gap-4 overflow-x-auto pb-6 mb-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-          {filters.map((filter) => (
-            <button
-              key={filter}
-              onClick={() => handleFilterClick(filter)}
-              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                activeFilter === filter 
-                  ? 'bg-gray-900 text-white shadow-md' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-              aria-label={`Filtrer par ${filter}`}
-              aria-pressed={activeFilter === filter}
-            >
-              {filter}
-            </button>
-          ))}
+  {isSearching && (
+    <>
+      {/* Version mobile */}
+      <button 
+        onClick={handleShowAllProperties}
+        className="order-2 md:hidden flex items-center gap-2 border border-gray-300 rounded-xl px-4 py-2 hover:border-brand hover:bg-brand/5 transition-colors text-sm font-semibold"
+        aria-label="Voir toutes les propriétés"
+      >
+        Voir tout
+      </button>
+      
+      {/* Version desktop */}
+      <button 
+        onClick={handleShowAllProperties}
+        className="hidden md:flex items-center gap-2 border border-gray-300 rounded-xl px-4 py-2 hover:border-brand hover:bg-brand/5 transition-colors text-sm font-semibold order-2 md:order-none"
+        aria-label="Voir toutes les propriétés"
+      >
+        Voir tout
+      </button>
+    </>
+  )}
+</div>
+
+        {/* Filtres actifs */}
+        {activeFiltersCount > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">
+                Filtres appliqués ({activeFiltersCount})
+              </h3>
+              <button 
+                onClick={handleShowAllProperties}
+                className="text-brand text-sm font-medium hover:underline flex items-center gap-1"
+              >
+                <X className="w-3 h-3" />
+                Tout effacer
+              </button>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              {location.trim() && (
+                <div className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-2">
+                  <Map className="w-3 h-3" />
+                  <span className="font-medium">Ville:</span> {location}
+                </div>
+              )}
+              {propertyType.trim() && (
+                <div className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-2">
+                  <Home className="w-3 h-3" />
+                  <span className="font-medium">Type:</span> {propertyType}
+                </div>
+              )}
+              {guests.trim() && (
+                <div className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-2">
+                  <Users className="w-3 h-3" />
+                  <span className="font-medium">Personnes:</span> {guests}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Résultats */}
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gray-900">
+            {isSearching ? (
+              <>
+                {filteredProperties.length} résultat{filteredProperties.length > 1 ? "s" : ""} pour "
+                {location && <span className="text-brand">{location} </span>}
+                {propertyType && <span className="text-brand">{propertyType} </span>}
+                {guests && <span className="text-brand">{guests} personne{parseInt(guests) > 1 ? "s" : ""}</span>}
+                "
+              </>
+            ) : (
+              `Toutes nos propriétés (${properties.length})`
+            )}
+          </h2>
+          
+          {filteredProperties.length === 0 && isSearching && (
+            <p className="text-gray-600 mt-2">
+              Aucun résultat trouvé. Essayez d'autres critères ou{" "}
+              <button 
+                onClick={handleShowAllProperties}
+                className="text-brand font-medium hover:underline"
+              >
+                affichez toutes les propriétés
+              </button>
+            </p>
+          )}
         </div>
 
         {/* Results Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-          {properties.map((property) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredProperties.map((property) => (
             <div 
               key={property.id} 
-              className="group cursor-pointer"
-              onClick={() => handlePropertyClick(property.id)}
+              className="group cursor-pointer border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  handlePropertyClick(property.id);
+                if (e.key === "Enter" || e.key === " ") {
+                  handleReserveClick(property.id, e as any);
                 }
               }}
-              aria-label={`Voir les détails de ${property.title}`}
+              aria-label={`Voir ${property.title} à ${property.location}`}
             >
-              <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-200 mb-3">
+              {/* Image */}
+              <div className="relative aspect-video overflow-hidden bg-gray-200">
                 <img 
                   src={property.img} 
-                  alt={`${property.title} à ${property.location}`}
-                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  alt={property.title}
+                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
                 />
-                <button 
-                  onClick={(e) => handleFavoriteClick(e, property.id)}
-                  className="absolute top-3 right-3 p-2 rounded-full bg-transparent hover:scale-110 transition-transform"
-                  aria-label={`Ajouter ${property.title} aux favoris`}
-                >
-                  <Heart className="w-6 h-6 text-white/70 hover:text-white fill-black/50 hover:fill-black/70" />
-                </button>
-                <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold shadow-sm">
-                  Invité favori
+                <div className="absolute top-3 right-3 bg-white/90 px-2 py-1 rounded text-xs font-semibold">
+                  {property.type}
                 </div>
               </div>
               
-              <div className="flex justify-between items-start mb-1">
-                <h3 className="font-bold text-gray-900 truncate pr-2">{property.location}</h3>
-                <div className="flex items-center gap-1 text-sm">
-                  <Star className="w-3 h-3 fill-current text-gray-900" />
-                  <span>{property.rating.toFixed(1)}</span>
-                  <span className="text-gray-500">({property.reviews})</span>
+              {/* Contenu */}
+              <div className="p-4">
+                {/* Titre et localisation */}
+                <h3 className="font-bold text-gray-900 text-lg mb-1">{property.title}</h3>
+                <p className="text-gray-600 text-sm mb-3">
+                  {property.location}, {property.city}
+                </p>
+                
+                {/* Infos principales */}
+                <div className="flex items-center gap-4 text-sm text-gray-700 mb-3">
+                  {property.type !== "Bureau" && property.type !== "Salle événement" && (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        <span>{property.capacity} pers.</span>
+                      </div>
+                      {property.bedrooms > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Bed className="w-4 h-4" />
+                          <span>{property.bedrooms} ch.</span>
+                        </div>
+                      )}
+                      {property.bathrooms > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Bath className="w-4 h-4" />
+                          <span>{property.bathrooms} sdb</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  
+                  {property.type === "Bureau" && (
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      <span>Capacité: {property.capacity} pers.</span>
+                    </div>
+                  )}
+                  
+                  {property.type === "Salle événement" && (
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      <span>Jusqu&apos;à {property.capacity} pers.</span>
+                    </div>
+                  )}
                 </div>
-              </div>
-              
-              <p className="text-gray-500 text-sm mb-1">{property.type} • {property.title}</p>
-              
-              <div className="flex items-baseline gap-1 mt-2">
-                <span className="font-semibold text-gray-900">
-                  {property.price.toLocaleString('fr-FR')} FCFA
-                </span>
-                <span className="text-gray-600 text-sm">par nuit</span>
+                
+                {/* WiFi et équipements */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {property.wifi && (
+                    <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
+                      <Wifi className="w-3 h-3" />
+                      WiFi
+                    </div>
+                  )}
+                  
+                  {property.amenities.slice(0, 3).map((amenity, index) => (
+                    <div key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                      {amenity}
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Prix */}
+                <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                  <div>
+                    <span className="font-bold text-gray-900 text-lg">
+                      {property.price.toLocaleString("fr-FR")} FCFA
+                    </span>
+                    <span className="text-gray-600 text-sm ml-1">/nuit</span>
+                  </div>
+                  
+                  <button 
+                    onClick={(e) => handleReserveClick(property.id, e)}
+                    className="text-brand font-semibold text-sm hover:text-brand-dark transition-colors"
+                    aria-label={`Réserver ${property.title}`}
+                  >
+                    Réserver →
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
+
+        {filteredProperties.length === 0 && isSearching && (
+          <div className="text-center py-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+              <SearchIcon className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Aucune propriété ne correspond à votre recherche
+            </h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              Essayez de modifier vos critères ou consultez toutes nos propriétés disponibles
+            </p>
+            <button 
+              onClick={handleShowAllProperties}
+              className="bg-brand text-white px-6 py-3 rounded-lg font-semibold hover:bg-brand-dark transition-colors"
+            >
+              Voir toutes les propriétés
+            </button>
+          </div>
+        )}
 
         {/* Floating Map Button (Mobile/Tablet) */}
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 md:hidden z-40">
           <button 
-            onClick={handleMapClick}
-            className="bg-gray-900 text-white px-6 py-3 rounded-full font-semibold shadow-xl flex items-center gap-2 hover:scale-105 transition-transform"
-            aria-label="Afficher la carte"
+            onClick={handleShowAllProperties}
+            className="bg-brand text-white px-6 py-3 rounded-full font-semibold shadow-xl flex items-center gap-2 hover:bg-brand-dark transition-transform"
+            aria-label="Voir toutes les propriétés"
           >
-            <Map className="w-4 h-4" />
-            Carte
+            <SearchIcon className="w-4 h-4" />
+            Voir tout
           </button>
         </div>
 
