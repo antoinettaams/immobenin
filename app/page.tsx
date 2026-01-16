@@ -5,6 +5,7 @@ import { HowItWorks } from '@/components/HowItWorks';
 import { OwnerCTA } from '@/components/CTAHost';
 import { Testimonials } from '@/components/Testimonials';
 import { BeninFocus } from '@/components/BeninFocus';
+import { StickyNav } from '@/components/Navbar';
 
 export default function HomePage() {
   return (
@@ -16,6 +17,7 @@ export default function HomePage() {
       <OwnerCTA />
       <Testimonials />
       <BeninFocus />
+      <StickyNav />
     </main>
   );
 }

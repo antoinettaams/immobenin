@@ -41,9 +41,6 @@ export const Contact: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-16"
         >
-          <span className="inline-block px-4 py-1.5 mb-4 text-sm font-bold text-brand bg-brand/10 rounded-full">
-            Contact
-          </span>
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
             Contactez-nous
           </h1>
