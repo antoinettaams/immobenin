@@ -13,11 +13,11 @@ interface Category {
 }
 
 const categories: Category[] = [
-  { id: '1', name: 'Maisons & Apparts', icon: Home, image: 'https://picsum.photos/400/300?random=10', description: 'Logements entiers pour votre confort' },
-  { id: '2', name: 'Bureaux & Travail', icon: Building2, image: 'https://picsum.photos/400/300?random=11', description: 'Espaces professionnels équipés' },
-  { id: '3', name: 'Événements', icon: PartyPopper, image: 'https://picsum.photos/400/300?random=12', description: 'Salles pour mariages et fêtes' },
-  { id: '4', name: 'Espaces Privés', icon: Trees, image: 'https://picsum.photos/400/300?random=13', description: 'Jardins, cours et villas' },
-  { id: '5', name: 'Tourisme', icon: Umbrella, image: 'https://picsum.photos/400/300?random=14', description: 'Hébergements pour vacanciers' },
+  { id: '1', name: 'Maisons & Apparts', icon: Home, image: '/images/home/appart.jpg', description: 'Logements entiers pour votre confort' },
+  { id: '2', name: 'Bureaux & Travail', icon: Building2, image: '/images/home/bureau.jpg', description: 'Espaces professionnels équipés' },
+  { id: '3', name: 'Événements', icon: PartyPopper, image: '/images/home/salle-events.jpg', description: 'Salles pour mariages et fêtes' },
+  { id: '4', name: 'Espaces Privés', icon: Trees, image: '/images/home/salle-privees.jpg', description: 'Salles de réunion, Jardins, cours et villas' },
+  { id: '5', name: 'Tourisme', icon: Umbrella, image: '/images/home/tourisme.jpg', description: 'Hébergements pour vacanciers' },
 ];
 
 export const CategoriesSection: React.FC = () => {
@@ -105,7 +105,7 @@ export const ValuePropSection: React.FC = () => {
     {
       icon: MessageCircle,
       title: "Réservation WhatsApp",
-    desc: "Contact direct avec le propriétaire. Réservez rapidement, négociez en toute transparence."
+      desc: "Contact direct avec le propriétaire. Réservez rapidement, négociez en toute transparence."
     },
     { 
       icon: ShieldCheck, 
@@ -121,82 +121,81 @@ export const ValuePropSection: React.FC = () => {
 
   return (
     <section 
-      className="py-20 bg-gray-50"
-      aria-labelledby="value-prop-title"
-    >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
-          
-          {/* Texte et features */}
-          <div className="lg:w-1/2 flex flex-col items-center lg:items-start text-center lg:text-left">
-            <h2 
-              id="value-prop-title"
-              className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 lg:mb-6 leading-tight"
-            >
-              Pourquoi choisir <span className="text-brand">ImmoBenin</span> ?
-            </h2>
-            <p className="text-lg text-gray-600 mb-8 lg:mb-10">
-              Oubliez les groupes Facebook et les démarches incertaines. Nous apportons la confiance, 
-              la sécurité et la simplicité dans la location immobilière au Bénin.
-            </p>
+  className="py-20 bg-gray-50"
+  aria-labelledby="value-prop-title"
+>
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="flex flex-col lg:flex-row items-stretch gap-8 lg:gap-12">
+      
+      {/* Texte et features */}
+      <div className="lg:w-1/2 flex flex-col justify-center items-center lg:items-start text-center lg:text-left">
+        <h2 
+          id="value-prop-title"
+          className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 lg:mb-6 leading-tight"
+        >
+          Pourquoi choisir <span className="text-brand">ImmoBenin</span> ?
+        </h2>
+        <p className="text-lg text-gray-600 mb-8 lg:mb-10">
+          Oubliez les groupes Facebook et les démarches incertaines. Nous apportons la confiance, 
+          la sécurité et la simplicité dans la location immobilière au Bénin.
+        </p>
 
-            <div className="grid sm:grid-cols-2 gap-6 lg:gap-8 w-full">
-              {features.map((feature, index) => {
-                const IconComponent = feature.icon;
-                return (
-                  <div 
-                    key={index} 
-                    className="flex flex-col items-center lg:items-start gap-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="p-3 bg-brand/10 rounded-xl text-brand">
-                      <IconComponent className="w-7 h-7 lg:w-8 lg:h-8" aria-hidden="true" />
-                    </div>
-                    <h3 className="font-bold text-lg lg:text-xl text-gray-900">
-                      {feature.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm lg:text-base">
-                      {feature.desc}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Image animée */}
-          <div className="lg:w-1/2 relative mt-8 lg:mt-0">
-            <motion.figure
-              initial={{ rotate: -3 }}
-              whileInView={{ rotate: 3 }}
-              transition={{ 
-                duration: 5, 
-                repeat: Infinity, 
-                repeatType: "mirror",
-                ease: "easeInOut"
-              }}
-              viewport={{ once: true }}
-              className="rounded-3xl overflow-hidden shadow-2xl border-4 border-white"
-              aria-label="Famille heureuse utilisant ImmoBenin au Bénin"
-            >
-              <Image
-                src="https://picsum.photos/600/700?random=99"
-                alt="Famille heureuse utilisant les services ImmoBenin"
-                width={600}
-                height={700}
-                className="w-full h-auto"
-                sizes="(max-width: 768px) 100vw, 50vw"
-              />
-            </motion.figure>
-            
-            {/* Élément décoratif */}
-            <div 
-              className="absolute -bottom-6 -left-6 w-32 h-32 lg:w-40 lg:h-40 bg-brand rounded-full blur-3xl opacity-20" 
-              aria-hidden="true"
-            />
-          </div>
-
+        <div className="grid sm:grid-cols-2 gap-6 lg:gap-8 w-full">
+          {features.map((feature, index) => {
+            const IconComponent = feature.icon;
+            return (
+              <div 
+                key={index} 
+                className="flex flex-col items-center lg:items-start gap-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="p-3 bg-brand/10 rounded-xl text-brand">
+                  <IconComponent className="w-7 h-7 lg:w-8 lg:h-8" aria-hidden="true" />
+                </div>
+                <h3 className="font-bold text-lg lg:text-xl text-gray-900">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-600 text-sm lg:text-base">
+                  {feature.desc}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
-    </section>
+
+      {/* Image animée */}
+      <div className="lg:w-1/2 relative flex items-center">
+        <motion.figure
+          initial={{ rotate: -3 }}
+          whileInView={{ rotate: 3 }}
+          transition={{ 
+            duration: 5, 
+            repeat: Infinity, 
+            repeatType: "mirror",
+            ease: "easeInOut"
+          }}
+          viewport={{ once: true }}
+          className="relative w-full h-full min-h-[500px] lg:min-h-[600px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white"
+          aria-label="Famille heureuse utilisant ImmoBenin au Bénin"
+        >
+          <Image
+            src="/images/home/tresor.jpg"
+            alt="Famille heureuse utilisant les services ImmoBenin"
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 50vw"
+          />
+        </motion.figure>
+        
+        {/* Élément décoratif */}
+        <div 
+          className="absolute -bottom-6 -left-6 w-32 h-32 lg:w-40 lg:h-40 bg-brand rounded-full blur-3xl opacity-20" 
+          aria-hidden="true"
+        />
+      </div>
+
+    </div>
+  </div>
+</section>
   );
 };

@@ -45,7 +45,7 @@ export const OwnerCTA: React.FC = () => {
             <div className="md:w-1/2 h-64 md:h-auto relative min-h-[250px] md:min-h-[400px] order-first md:order-last">
               <div className="relative w-full h-full">
                 <Image
-                  src="https://picsum.photos/800/800?random=88"
+                  src="/images/home/cta.jpg"
                   alt="Propriétaire accueillant des voyageurs dans un espace bien aménagé"
                   fill
                   className="object-cover"

@@ -125,7 +125,7 @@ export const Hero: React.FC = () => {
               style={{ transformStyle: 'preserve-3d' }}
             >
               <Image
-                src="https://picsum.photos/800/1000?random=1"
+                src="/images/home/hero.jpg"
                 alt="Belle maison au Bénin disponible à la location"
                 width={800}
                 height={1000}
@@ -170,7 +170,7 @@ export const Hero: React.FC = () => {
                 }}
                 className="absolute bottom-8 left-8 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg flex items-center gap-3"
                 aria-label="Plus de 1000 visiteurs ce mois-ci"
-              >
+               >
                 <div className="flex -space-x-2" aria-hidden="true">
                   <Image
                     src="https://picsum.photos/32/32?random=50"
