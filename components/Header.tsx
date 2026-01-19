@@ -156,7 +156,7 @@ export const Header: React.FC = () => {
             className="md:hidden bg-white border-t border-gray-100 absolute top-full left-0 right-0 shadow-xl overflow-hidden"
             role="dialog"
             aria-modal="true"
-            aria-label="Menu mobile"
+            aria-label="Menu mobile" 
           >
             <nav className="flex flex-col p-6 gap-6  text-lg font-medium text-gray-800">
               <Link 

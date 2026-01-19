@@ -34,9 +34,9 @@ export const OwnerCTA: React.FC = () => {
                     size="lg" 
                     onClick={handlePublishClick}
                     aria-label="Publier mon espace gratuitement sur ImmoBenin"
-                    className="w-full md:w-auto px-6 py-3 text-base md:text-lg"
+                    className="w-full md:w-auto px-6 py-2 text-base md:text-lg"
                   >
-                    Publier mon espace gratuitement
+                    Publier mon espace
                   </Button>
                </div>
             </div>
