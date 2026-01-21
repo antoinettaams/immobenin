@@ -1,6 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
+import emailjs from '@emailjs/browser';
+import { Toaster, toast } from 'react-hot-toast'; // IMPORT TOAST
 import {
   Phone,
   Mail,
@@ -9,7 +11,10 @@ import {
   Send,
   Facebook,
   Instagram, 
-  Music
+  Music,
+  CheckCircle,
+  XCircle,
+  Loader2
 } from "lucide-react";
 
 export const Contact: React.FC = () => {
@@ -19,6 +24,9 @@ export const Contact: React.FC = () => {
     subject: "",
     message: "",
   });
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -26,170 +34,319 @@ export const Contact: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    // Ajoutez ici la logique d'envoi du formulaire
+    setIsLoading(true);
+
+    // Validation
+    if (!formData.name || !formData.email || !formData.message) {
+      toast.error("Veuillez remplir tous les champs obligatoires.", {
+        icon: <XCircle className="w-5 h-5" />,
+        style: {
+          background: '#FEF2F2',
+          color: '#DC2626',
+          border: '1px solid #FECACA',
+        },
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    // Toast de chargement
+    const loadingToast = toast.loading(
+      <div className="flex items-center gap-2">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span>Envoi du message en cours...</span>
+      </div>,
+      {
+        style: {
+          background: '#F0F9FF',
+          color: '#0369A1',
+          border: '1px solid #BAE6FD',
+        },
+      }
+    );
+
+    try {
+      const serviceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!;
+      const templateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!;
+      const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!;
+
+      const templateParams = {
+        from_name: formData.name,
+        from_email: formData.email,
+        subject: formData.subject || "Demande de contact",
+        message: formData.message,
+        to_email: "antoinettaams@gmail.com",
+        phone: "Non fourni",
+        date: new Date().toLocaleDateString('fr-FR', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }),
+        time: new Date().toLocaleTimeString('fr-FR', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        })
+      };
+
+      const result = await emailjs.send(
+        serviceId,
+        templateId,
+        templateParams,
+        publicKey
+      );
+
+      if (result.status === 200) {
+        // Success toast
+        toast.success(
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span className="font-semibold">Message envoyé avec succès !</span>
+            </div>
+            <p className="text-sm text-green-600">Nous vous répondrons dans les plus brefs délais.</p>
+          </div>,
+          {
+            id: loadingToast,
+            duration: 5000,
+            style: {
+              background: '#F0FDF4',
+              color: '#166534',
+              border: '1px solid #BBF7D0',
+            },
+            iconTheme: {
+              primary: '#16A34A',
+              secondary: '#FFFFFF',
+            }
+          }
+        );
+
+        // Réinitialiser le formulaire
+        setFormData({
+          name: "",
+          email: "",
+          subject: "",
+          message: "",
+        });
+      }
+    } catch (err: any) {
+      console.error("Erreur EmailJS:", err);
+      
+      // Error toast
+      toast.error(
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <XCircle className="w-5 h-5" />
+            <span className="font-semibold">Erreur d'envoi</span>
+          </div>
+          <p className="text-sm">Veuillez réessayer ou nous contacter par téléphone.</p>
+        </div>,
+        {
+          id: loadingToast,
+          duration: 5000,
+          style: {
+            background: '#FEF2F2',
+            color: '#DC2626',
+            border: '1px solid #FECACA',
+          },
+        }
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <section className="relative min-h-screen pt-24 pb-20 bg-gradient-to-br from-white via-gray-50 to-red-50/20">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-16"
-        >
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
-            Contactez-nous
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Une question, un projet ou besoin d&apos;assistance ? Notre équipe est à
-            votre écoute.
-          </p>
-        </motion.div>
-
-        <div className="grid lg:grid-cols-2 gap-16 items-start">
-          {/* GAUCHE – Infos */}
+    <>
+      {/* Toaster Component - Place it at the root */}
+      <Toaster
+        position="top-right"
+        gutter={8}
+        toastOptions={{
+          duration: 5000,
+          success: {
+            duration: 5000,
+          },
+          error: {
+            duration: 5000,
+          },
+        }}
+        containerStyle={{
+          top: 80,
+        }}
+      />
+      
+      <section className="relative min-h-screen pt-24 pb-20 bg-gradient-to-br from-white via-gray-50 to-red-50/20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-16"
           >
-            <div className="space-y-6">
-              <Info
-                icon={Phone}
-                title="Téléphone"
-                value="+229 60 00 00 00"
-                subtitle="Lun - Ven: 8h - 18h"
-              />
-              <Info
-                icon={Mail}
-                title="Email"
-                value="immobenin@gmail.com"
-                subtitle="Réponse sous 24h"
-              />
-              <Info
-                icon={MapPin}
-                title="Lieu"
-                value="Cotonou, Fidjrossè"
-                subtitle="Bénin"
-              />
-            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
+              Contactez-nous
+            </h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Une question, un projet ou besoin d&apos;assistance ? Notre équipe est à
+              votre écoute.
+            </p>
+          </motion.div>
 
-            {/* Réseaux sociaux */}
-            <div>
-              <p className="font-semibold text-gray-900 mb-4">
-                Suivez-nous sur les réseaux
-              </p>
-              <div className="flex gap-4">
-                <Social 
-                  icon={Facebook} 
-                  href="https://facebook.com/immobenin"
-                  label="Facebook"
+          <div className="grid lg:grid-cols-2 gap-16 items-start">
+            {/* GAUCHE – Infos */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-10"
+            >
+              <div className="space-y-6">
+                <Info
+                  icon={Phone}
+                  title="Téléphone"
+                  value="+229 60 00 00 00"
+                  subtitle="Lun - Ven: 8h - 18h"
                 />
-                <Social 
-                  icon={Instagram} 
-                  href="https://instagram.com/immobenin"
-                  label="Instagram"
+                <Info
+                  icon={Mail}
+                  title="Email"
+                  value="immobenin@gmail.com"
+                  subtitle="Réponse sous 24h"
                 />
-                <Social 
-                  icon={Music} 
-                  href="https://tiktok.com/@immobenin"
-                  label="TikTok"
+                <Info
+                  icon={MapPin}
+                  title="Lieu"
+                  value="Cotonou, Fidjrossè"
+                  subtitle="Bénin"
                 />
               </div>
-            </div>
 
-            {/* WhatsApp Direct */}
-            <div className="bg-gradient-to-r from-brand/10 to-brand/5 p-2 rounded-2xl">
-              <div className="flex items-center gap-3 mb-4">
-                <MessageSquare className="w-6 h-6 text-brand" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">Support WhatsApp</h3>
-                  <p className="text-sm text-gray-600">Disponible H24</p>
+              {/* Réseaux sociaux */}
+              <div>
+                <p className="font-semibold text-gray-900 mb-4">
+                  Suivez-nous sur les réseaux
+                </p>
+                <div className="flex gap-4">
+                  <Social 
+                    icon={Facebook} 
+                    href="https://facebook.com/immobenin"
+                    label="Facebook"
+                  />
+                  <Social 
+                    icon={Instagram} 
+                    href="https://instagram.com/immobenin"
+                    label="Instagram"
+                  />
+                  <Social 
+                    icon={Music} 
+                    href="https://tiktok.com/@immobenin"
+                    label="TikTok"
+                  />
                 </div>
               </div>
-              <a
-                href="https://wa.me/22961000000"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 bg-brand text-white px-6 py-3 rounded-xl font-semibold hover:bg-brand-dark transition-colors w-full"
-              >
-                <MessageSquare className="w-5 h-5" />
-                Discuter sur WhatsApp
-              </a>
-            </div>
-          </motion.div>
 
-          {/* DROITE – Formulaire */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white"
-          >
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Envoyez-nous un message
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <Input
-                label="Nom complet *"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                placeholder="Votre nom complet"
-              />
+              {/* WhatsApp Direct */}
+              <div className="bg-gradient-to-r from-brand/10 to-brand/5 p-4 rounded-2xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <MessageSquare className="w-6 h-6 text-brand" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Support WhatsApp</h3>
+                    <p className="text-sm text-gray-600">Disponible H24</p>
+                  </div>
+                </div>
+                <a
+                  href="https://wa.me/22953998359"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 bg-brand text-white px-6 py-4 rounded-xl font-semibold hover:bg-brand-dark transition-colors w-full"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  Discuter sur WhatsApp
+                </a>
+              </div>
+            </motion.div>
 
-              <Input
-                label="Email *"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                placeholder="votre@email.com"
-              />
+            {/* DROITE – Formulaire */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white"
+            >
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                Envoyez-nous un message
+              </h2>
+              <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+                <Input
+                  label="Nom complet *"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  placeholder="Votre nom complet"
+                  disabled={isLoading}
+                />
 
-              <Input
-                label="Sujet *"
-                name="subject"
-                value={formData.subject}
-                onChange={handleChange}
-                required
-                placeholder="Objet de votre message"
-              />
+                <Input
+                  label="Email *"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  placeholder="votre@email.com"
+                  disabled={isLoading}
+                />
 
-              <Textarea
-                label="Message *"
-                name="message"
-                value={formData.message}
-                onChange={handleChange}
-                required
-                placeholder="Décrivez votre demande..."
-              />
+                <Input
+                  label="Sujet *"
+                  name="subject"
+                  value={formData.subject}
+                  onChange={handleChange}
+                  required
+                  placeholder="Objet de votre message"
+                  disabled={isLoading}
+                />
 
-              <button
-                type="submit"
-                className="w-full bg-brand text-white py-4 rounded-xl font-semibold hover:bg-brand-dark transition-all flex items-center justify-center gap-2 group"
-              >
-                <Send className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                Envoyer le message
-              </button>
-              
-              <p className="text-sm text-gray-500 text-center">
-                * Champs obligatoires
-              </p>
-            </form>
-          </motion.div>
+                <Textarea
+                  label="Message *"
+                  name="message"
+                  value={formData.message}
+                  onChange={handleChange}
+                  required
+                  placeholder="Décrivez votre demande..."
+                  disabled={isLoading}
+                  rows={5}
+                />
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-brand text-white py-4 rounded-xl font-semibold hover:bg-brand-dark transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Envoi en cours...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                      Envoyer le message
+                    </>
+                  )}
+                </button>
+              </form>
+            </motion.div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 };
 
-/* ---------- Components ---------- */
+/* ---------- Components (inchangés) ---------- */
 
 interface InfoProps {
   icon: React.ElementType;
@@ -243,7 +400,7 @@ const Input = ({ label, ...props }: InputProps) => (
     </label>
     <input
       {...props}
-      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all"
+      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
     />
   </div>
 );
@@ -259,7 +416,7 @@ const Textarea = ({ label, ...props }: TextareaProps) => (
     </label>
     <textarea
       {...props}
-      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-brand focus:border-transparent outline-none resize-none transition-all"
+      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-brand focus:border-transparent outline-none resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
     />
   </div>
 );

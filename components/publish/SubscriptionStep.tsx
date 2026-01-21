@@ -1,35 +1,76 @@
-// components/publish/SubscriptionStep.tsx
 "use client";
-import React from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { Button } from "@/components/Button";
+import { PaymentForm, PaymentData } from "./PaymentForm";
+import toast from "react-hot-toast";
 
 interface SubscriptionStepProps {
-  onSubscribe: () => void;
+  onSubscribe: (paymentData: PaymentData) => void;
   isLoading: boolean;
+  onBack?: () => void;
 }
 
 export const SubscriptionStep: React.FC<SubscriptionStepProps> = ({
   onSubscribe,
   isLoading,
+  onBack,
 }) => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 mt-20">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+  const router = useRouter();
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
 
-        {/* Titre */}
-        <h1 className="text-2xl font-bold text-center text-gray-900 mb-2">
+  const handlePaymentSuccess = (data: PaymentData) => {
+    // 1. notifier le parent
+    onSubscribe(data);
+
+    // 2. toast succès
+    toast.success("✅ Abonnement activé ! Redirection...", {
+      duration: 2000,
+      position: "top-center",
+      style: {
+        background: "#10B981",
+        color: "#fff",
+        fontSize: "14px",
+        padding: "12px",
+      },
+    });
+
+    // 3. redirection UNIQUE
+    setTimeout(() => {
+      router.push("/publish");
+    }, 2000);
+  };
+
+  if (showPaymentForm) {
+    return (
+      <PaymentForm
+        onBack={() => {
+          setShowPaymentForm(false);
+          onBack?.();
+        }}
+        onSubmit={handlePaymentSuccess}
+        isLoading={isLoading}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 pt-24 pb-8 md:py-0 md:mt-20">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 mt-4 md:mt-0">
+        <h1 className="text-xl md:text-2xl font-bold text-center text-gray-900 mb-2">
           Abonnement requis
         </h1>
-        <p className="text-center text-gray-600 mb-8">
-          Pour publier une annonce sur <span className="font-bold text-brand">ImmoBenin</span>,  
+
+        <p className="text-center text-gray-600 mb-6">
+          Pour publier une annonce sur{" "}
+          <span className="font-bold text-brand">ImmoBenin</span>,  
           vous devez être abonné.
         </p>
 
-        {/* Carte prix */}
-        <div className="border-2 border-brand rounded-xl p-6 mb-6 text-center">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            ImmoBenin 
+        <div className="border-2 border-brand rounded-xl p-5 mb-6 text-center">
+          <h2 className="text-lg font-bold text-gray-900 mb-2">
+            ImmoBenin Premium
           </h2>
 
           <div className="flex items-end justify-center gap-2 mb-2">
@@ -41,35 +82,30 @@ export const SubscriptionStep: React.FC<SubscriptionStepProps> = ({
             par mois • Sans engagement
           </p>
 
-          {/* Bouton */}
           <Button
-            onClick={onSubscribe}
+            onClick={() => setShowPaymentForm(true)}
             disabled={isLoading}
             className="w-full py-3 text-lg font-bold"
           >
-            {isLoading ? "Traitement..." : "S’abonner maintenant"}
+            S'abonner maintenant
           </Button>
         </div>
 
-        {/* Avantages simples */}
         <div className="space-y-3 mb-6">
-          <div className="flex items-center gap-3 text-gray-700">
-            <Check className="w-5 h-5 text-green-600" />
-            <span>Publiez des annonces illimitées</span>
-          </div>
-          <div className="flex items-center gap-3 text-gray-700">
-            <Check className="w-5 h-5 text-green-600" />
-            <span>Visibilité prioritaire</span>
-          </div>
-          <div className="flex items-center gap-3 text-gray-700">
-            <Check className="w-5 h-5 text-green-600" />
-            <span>Support client dédié</span>
-          </div>
+          {[
+            "Publiez des annonces illimitées",
+            "Visibilité prioritaire",
+            "Support client dédié",
+          ].map((text) => (
+            <div key={text} className="flex items-start gap-3 text-gray-700">
+              <Check className="w-5 h-5 text-green-600 mt-0.5" />
+              <span>{text}</span>
+            </div>
+          ))}
         </div>
 
-        {/* Sécurité */}
-        <p className="text-center text-sm text-gray-500">
-          Paiement sécurisé • Mobile Money & carte bancaire
+        <p className="text-center text-xs text-gray-500">
+          Paiement sécurisé • Mobile Money uniquement
         </p>
       </div>
     </div>
