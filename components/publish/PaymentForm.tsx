@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, Lock, Smartphone, Shield } from 'lucide-react';
 import { Button } from '@/components/Button';
 import toast, { Toaster } from 'react-hot-toast';
@@ -9,6 +9,7 @@ export interface PaymentData {
   operator: 'mtn' | 'moov';
   pin?: string;
 }
+
 interface PaymentFormProps {
   onBack: () => void;
   onSubmit: (data: PaymentData) => void;
@@ -25,24 +26,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   const [pin, setPin] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    // Ajouter le son de notification
-    const audio = new Audio('/notification.mp3');
-    
-    return () => {
-      audio.pause();
-    };
-  }, []);
-
-  const playSuccessSound = () => {
-    try {
-      const audio = new Audio('/notification.mp3');
-      audio.play().catch(e => console.log("Son non joué:", e));
-    } catch (error) {
-      console.log("Audio non supporté");
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,9 +79,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
     });
 
     await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Jouer le son de succès
-    playSuccessSound();
 
     // Toast de succès
     toast.success('✅ Paiement confirmé ! Redirection vers la publication...', {
