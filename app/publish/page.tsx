@@ -1,3 +1,4 @@
+// app/publish/page.tsx (correction)
 "use client";
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -82,7 +83,7 @@ export default function PublishPage() {
           onSubscribe={showPaymentForm ? handlePaymentSubmit : handleSubscribeClick}
           isLoading={isProcessingPayment}
           onBack={showPaymentForm ? handleBackFromPayment : undefined}
-          showPaymentForm={showPaymentForm}
+          // Supprimez cette ligne : afficherFormulaireDePaiement={afficherFormulaireDePaiement}
         />
       )}
 
