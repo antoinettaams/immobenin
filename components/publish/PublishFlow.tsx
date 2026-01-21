@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Ajoutez useEffect
 
 // Import des étapes
 import { HousingTypeStep } from './steps/HousingTypeStep';
@@ -104,6 +104,7 @@ interface PublishFlowProps {
 
 export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isClient, setIsClient] = useState(false); // Nouvel état
 
   const [listingData, setListingData] = useState<ListingData>({
     propertyType: { category: 'house', subType: '', privacy: 'entire' },
@@ -141,6 +142,10 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
     }
   });
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Mise à jour des données
   const updateData = <K extends keyof ListingData>(section: K, data: ListingData[K]) => {
     setListingData(prev => ({
@@ -152,41 +157,50 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
   // Navigation
   const nextStep = () => {
     if (currentStep < 9) {
-      window.scrollTo(0, 0);
+      if (isClient) {
+        window.scrollTo(0, 0);
+      }
       setCurrentStep(prev => prev + 1);
     }
   };
 
   const prevStep = () => {
     if (currentStep > 1) {
-      window.scrollTo(0, 0);
+      if (isClient) {
+        window.scrollTo(0, 0);
+      }
       setCurrentStep(prev => prev - 1);
     }
   };
 
   // Fonction pour sauvegarder et quitter
   const handleSaveAndExit = () => {
-    // Sauvegarder dans localStorage
-    localStorage.setItem('draft_listing', JSON.stringify(listingData));
-    
-    // Afficher un message de confirmation
-    alert('Votre annonce a été sauvegardée en brouillon. Vous pouvez la reprendre plus tard.');
-    
-    // Rediriger vers la page d'accueil
-    window.location.href = '/';
+    // Vérifier si on est côté client AVANT d'utiliser localStorage
+    if (isClient && typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem('draft_listing', JSON.stringify(listingData));
+      
+      // Afficher un message de confirmation
+      alert('Votre annonce a été sauvegardée en brouillon. Vous pouvez la reprendre plus tard.');
+      
+      // Rediriger vers la page d'accueil
+      window.location.href = '/';
+    }
   };
 
   // Fonction pour publier (dans ReviewStep)
   const handlePublish = () => {
-    // Nettoyer le brouillon
-    localStorage.removeItem('draft_listing');
-    
-    // Soumettre les données
-    console.log('Publication complète:', listingData);
-    onComplete?.();
-    
-    // Rediriger vers l'accueil
-    window.location.href = '/';
+    // Vérifier si on est côté client
+    if (isClient && typeof window !== 'undefined' && window.localStorage) {
+      // Nettoyer le brouillon
+      localStorage.removeItem('draft_listing');
+      
+      // Soumettre les données
+      console.log('Publication complète:', listingData);
+      onComplete?.();
+      
+      // Rediriger vers l'accueil
+      window.location.href = '/';
+    }
   };
 
   // Rendu de l'étape actuelle
@@ -287,6 +301,18 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
         return null;
     }
   };
+
+  // Si ce n'est pas encore le client, affichez un chargement
+  if (!isClient) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto"></div>
+          <p className="mt-4 text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
