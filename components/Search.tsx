@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Search as SearchIcon, Map, Wifi, Home, Building2, Calendar, Users, Bath, Bed, X, Star, Heart, Share2, Phone, Mail, User, Clock, Shield, Check, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import { ArrowLeft, Search as SearchIcon, Map, Wifi, Home, Users, Bath, Bed, X, Phone, Check, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SearchProps {
