@@ -29,13 +29,13 @@ export const LocationStep: React.FC<LocationStepProps> = ({
     data.latitude || 6.3725,
     data.longitude || 2.3542,
   ]);
-
   const [address, setAddress] = useState(data.address || "");
   const [showLocationButton, setShowLocationButton] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [mapHeight, setMapHeight] = useState(420);
   const [searchMode, setSearchMode] = useState<'address' | 'pin'>('address');
   const [showPinInstruction, setShowPinInstruction] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
