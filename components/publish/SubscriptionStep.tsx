@@ -1,6 +1,5 @@
 "use client";
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { Button } from "@/components/Button";
 import { PaymentForm, PaymentData } from "./PaymentForm";
@@ -17,16 +16,15 @@ export const SubscriptionStep: React.FC<SubscriptionStepProps> = ({
   isLoading,
   onBack,
 }) => {
-  const router = useRouter();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   const handlePaymentSuccess = (data: PaymentData) => {
-    // 1. notifier le parent
+    // 1. notifier le parent (qui va changer currentStage)
     onSubscribe(data);
 
-    // 2. toast succès
-    toast.success("✅ Abonnement activé ! Redirection...", {
-      duration: 2000,
+    // 2. toast succès seulement
+    toast.success("✅ Abonnement activé avec succès !", {
+      duration: 3000,
       position: "top-center",
       style: {
         background: "#10B981",
@@ -35,11 +33,8 @@ export const SubscriptionStep: React.FC<SubscriptionStepProps> = ({
         padding: "12px",
       },
     });
-
-    // 3. redirection UNIQUE
-    setTimeout(() => {
-      router.push("/publish");
-    }, 2000);
+    
+    // 3. NE PAS faire router.push ici - le parent s'occupe de changer d'étape
   };
 
   if (showPaymentForm) {

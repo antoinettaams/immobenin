@@ -1,6 +1,6 @@
 // app/publish/page.tsx
 "use client";
-import React, { useState, useEffect } from 'react'; // Ajoutez useEffect
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { SubscriptionStep } from '@/components/publish/SubscriptionStep';
 import { PublishFlow } from '@/components/publish/PublishFlow';
@@ -11,14 +11,14 @@ export const dynamic = 'force-dynamic';
 
 export default function PublishPage() {
   const router = useRouter();
-  const [isClient, setIsClient] = useState(false); // État pour vérifier si on est côté client
+  const [isClient, setIsClient] = useState(false);
 
   const [currentStage, setCurrentStage] = useState<'subscription' | 'publishing'>('subscription');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   useEffect(() => {
-    setIsClient(true); // On est maintenant côté client
+    setIsClient(true);
   }, []);
 
   const handleSubscribeClick = () => {
@@ -36,12 +36,11 @@ export default function PublishPage() {
       await new Promise(resolve => setTimeout(resolve, 800));
 
       toast.success('✅ Paiement confirmé avec succès', {
-        duration: 2500,
+        duration: 3000, // <-- 3 secondes
         position: 'top-center',
         icon: '💰',
       });
 
-      // VÉRIFIEZ si on est côté client AVANT d'utiliser localStorage
       if (typeof window !== 'undefined') {
         localStorage.setItem('immobenin_payment', JSON.stringify({
           ...paymentData,
@@ -56,7 +55,7 @@ export default function PublishPage() {
 
     } catch (error) {
       toast.error('❌ Échec du paiement. Veuillez réessayer.', {
-        duration: 4000,
+        duration: 3000, // <-- 3 secondes
         position: 'top-center',
       });
       setIsProcessingPayment(false);
@@ -65,7 +64,7 @@ export default function PublishPage() {
 
   const handlePublishComplete = () => {
     toast.success('🎉 Votre annonce est publiée avec succès !', {
-      duration: 4000,
+      duration: 3000, // <-- 3 secondes
       position: 'top-center',
     });
 
@@ -88,7 +87,23 @@ export default function PublishPage() {
 
   return (
     <>
-      <Toaster position="top-center" />
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          // Configuration globale pour toutes les notifications
+          duration: 3000, // <-- 3 secondes par défaut
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000, // <-- 3 secondes pour les succès
+          },
+          error: {
+            duration: 3000, // <-- 3 secondes pour les erreurs
+          },
+        }}
+      />
 
       {/* ÉTAPE 1 — Abonnement + Paiement */}
       {currentStage === 'subscription' && (
