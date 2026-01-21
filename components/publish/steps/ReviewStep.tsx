@@ -15,7 +15,6 @@ import {
   DollarSign,
   Globe
 } from 'lucide-react';
-import { Button } from '@/components/Button';
 import { ListingData } from '../PublishFlow';
 
 interface ReviewStepProps {

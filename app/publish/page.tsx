@@ -7,6 +7,8 @@ import { PublishFlow } from '@/components/publish/PublishFlow';
 import { PaymentData } from '@/components/publish/PaymentForm';
 import toast, { Toaster } from 'react-hot-toast';
 
+export const dynamic = 'force-dynamic';
+
 export default function PublishPage() {
   const router = useRouter();
   const [isClient, setIsClient] = useState(false); // État pour vérifier si on est côté client
