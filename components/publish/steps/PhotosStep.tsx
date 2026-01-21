@@ -1,4 +1,3 @@
-// components/publish/steps/PhotosStep.tsx
 "use client";
 import React, { useState, useCallback } from 'react';
 import { Upload, Camera, X, Star, Image as ImageIcon } from 'lucide-react';
@@ -25,14 +24,24 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
   const [photos, setPhotos] = useState<Photo[]>(data);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Vérifier qu'on est côté client
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleFileSelect = (files: FileList) => {
+    // Ne pas exécuter côté serveur
+    if (typeof window === 'undefined') return;
+    
     const newPhotos: Photo[] = [];
     
     Array.from(files).slice(0, 10 - photos.length).forEach((file, index) => {
       if (file.type.startsWith('image/')) {
         const id = `photo-${Date.now()}-${index}`;
-        const url = URL.createObjectURL(file);
+        // CORRECTION : Vérifier que window.URL existe
+        const url = window.URL ? URL.createObjectURL(file) : '';
         newPhotos.push({ id, url, file, isPrimary: false });
       }
     });
@@ -64,6 +73,7 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
+    if (typeof window === 'undefined') return;
     handleFileSelect(e.dataTransfer.files);
   }, [photos]);
 
@@ -78,10 +88,17 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
   }, []);
 
   const removePhoto = (id: string) => {
+    const photoToRemove = photos.find(p => p.id === id);
+    
+    // Libérer l'URL blob si elle existe
+    if (photoToRemove?.url && typeof window !== 'undefined' && window.URL) {
+      URL.revokeObjectURL(photoToRemove.url);
+    }
+    
     const updatedPhotos = photos.filter(photo => photo.id !== id);
     
     // Si on supprime la photo principale et qu'il reste des photos
-    if (photos.find(p => p.id === id)?.isPrimary && updatedPhotos.length > 0) {
+    if (photoToRemove?.isPrimary && updatedPhotos.length > 0) {
       updatedPhotos[0].isPrimary = true;
     }
     
@@ -106,7 +123,34 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
     onUpdate(updatedPhotos);
   };
 
+  // Nettoyer les URLs blob quand le composant se démonte
+  React.useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && window.URL) {
+        photos.forEach(photo => {
+          if (photo.url && photo.url.startsWith('blob:')) {
+            URL.revokeObjectURL(photo.url);
+          }
+        });
+      }
+    };
+  }, []);
+
   const canContinue = photos.length >= 3;
+
+  // Si pas encore côté client, afficher un loader
+  if (!isClient) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 w-full">
+        <div className="min-h-[400px] flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto"></div>
+            <p className="mt-4 text-gray-600">Chargement du composant photos...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 w-full">
@@ -205,12 +249,14 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
               >
                 {/* Image */}
                 <div className="aspect-square bg-gray-100 relative">
-                  <img
-                    src={photo.url}
-                    alt={`Photo ${index + 1}`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+                  {photo.url && (
+                    <img
+                      src={photo.url}
+                      alt={`Photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
                   
                   {/* Overlay avec actions */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 p-2">
@@ -333,6 +379,14 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
           {photos.length > 0 && (
             <button
               onClick={() => {
+                // Nettoyer toutes les URLs blob
+                if (typeof window !== 'undefined' && window.URL) {
+                  photos.forEach(photo => {
+                    if (photo.url && photo.url.startsWith('blob:')) {
+                      URL.revokeObjectURL(photo.url);
+                    }
+                  });
+                }
                 setPhotos([]);
                 onUpdate([]);
               }}
