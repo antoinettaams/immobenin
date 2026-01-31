@@ -7,7 +7,8 @@ export async function GET(
 ) {
   try {
     // Dans Next.js 15.1+, params est une Promise qu'il faut attendre
-    const { id: idString } = await params
+    const resolvedParams = await params
+    const idString = resolvedParams.id
     const id = parseInt(idString)
     
     if (isNaN(id)) {
@@ -229,7 +230,7 @@ export async function GET(
           name: property.proprietaire.nom,
           email: property.proprietaire.email,
           phone: property.proprietaire.telephone,
-          formattedPhone: property.proprietaire.telephone.replace(/(\d{2})(?=\d)/g, '$1 ')
+          formattedPhone: property.proprietaire.telephone?.replace(/(\d{2})(?=\d)/g, '$1 ') || ''
         }
       },
       
@@ -314,6 +315,67 @@ export async function GET(
       success: false,
       error: 'Erreur lors de la récupération du bien',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    }, { status: 500 })
+  }
+}
+
+// Optionnel: Ajouter d'autres méthodes HTTP si nécessaire
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const resolvedParams = await params
+    const idString = resolvedParams.id
+    const id = parseInt(idString)
+    
+    if (isNaN(id)) {
+      return NextResponse.json(
+        { success: false, error: 'ID invalide' },
+        { status: 400 }
+      )
+    }
+    
+    // Pour l'instant, retourner une méthode non implémentée
+    return NextResponse.json(
+      { success: false, error: 'Méthode PUT non implémentée' },
+      { status: 501 }
+    )
+  } catch (error: any) {
+    console.error('❌ Erreur API property update:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Erreur lors de la mise à jour du bien'
+    }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const resolvedParams = await params
+    const idString = resolvedParams.id
+    const id = parseInt(idString)
+    
+    if (isNaN(id)) {
+      return NextResponse.json(
+        { success: false, error: 'ID invalide' },
+        { status: 400 }
+      )
+    }
+    
+    // Pour l'instant, retourner une méthode non implémentée
+    return NextResponse.json(
+      { success: false, error: 'Méthode DELETE non implémentée' },
+      { status: 501 }
+    )
+  } catch (error: any) {
+    console.error('❌ Erreur API property delete:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Erreur lors de la suppression du bien'
     }, { status: 500 })
   }
 }
