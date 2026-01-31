@@ -1,26 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
-// Types pour les équipements
-interface EquipementWithDetails {
-  equipement: {
-    id: number
-    nom: string
-    code: string
-    categorie: string
-    description: string | null
-    pourMaison: boolean
-    pourBureau: boolean
-    pourEvenement: boolean
-  }
-}
-
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id)
+    // Dans Next.js 15.1+, params est une Promise qu'il faut attendre
+    const { id: idString } = await params
+    const id = parseInt(idString)
     
     if (isNaN(id)) {
       return NextResponse.json(
