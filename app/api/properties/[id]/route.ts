@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
-// Solution pour Next.js 15.1+
+// Pour Next.js 16.1.1, params est un objet simple, PAS une Promise
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const params = await context.params
+    // Dans Next.js 16, params est déjà un objet
     const idString = params.id
     const id = parseInt(idString)
     
@@ -18,7 +18,6 @@ export async function GET(
       )
     }
 
-    // Le reste du code de votre API...
     const property = await prisma.bien.findUnique({
       where: {
         id: id,
@@ -60,7 +59,6 @@ export async function GET(
       )
     }
 
-    // ... (tout le reste du code de formattage reste identique)
     // Formater la réponse
     let capacity = 0
     let capacityDescription = ""
@@ -198,7 +196,7 @@ export async function GET(
         checkOutTime: property.checkOutTime || '12:00',
         childrenAllowed: property.childrenAllowed ?? true,
         checkInDescription: `Arrivée à partir de ${property.checkInTime || '14:00'}`,
-        checkOutDescription: `Départ avant ${property.checkInTime || '12:00'}`,
+        checkOutDescription: `Départ avant ${property.checkOutTime || '12:00'}`,
         extraRules: property.childrenAllowed === false ? "Enfants non autorisés" : "Enfants autorisés"
       },
       owner: {
