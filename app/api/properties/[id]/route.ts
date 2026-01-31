@@ -375,7 +375,7 @@ export async function DELETE(
     console.error('❌ Erreur API property delete:', error)
     return NextResponse.json({
       success: false,
-      error: 'Erreur lors de la suppression du bien'
+      error: 'Erreur lors de la suppression'
     }, { status: 500 })
   }
 }
