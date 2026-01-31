@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
-export async function GET(request: NextRequest) {
+// Type pour contourner le problème de types de Next.js 16
+type RouteContext = {
+  params: Promise<{ id: string }>
+}
+
+export async function GET(
+  request: NextRequest,
+  context: RouteContext
+) {
   try {
-    // Récupérer l'ID depuis l'URL sans utiliser params
-    const pathname = request.nextUrl.pathname
-    const segments = pathname.split('/')
-    const idString = segments[segments.length - 1]
+    // Dans Next.js 16.1.1, params est une Promise
+    const params = await context.params
+    const idString = params.id
     const id = parseInt(idString)
     
     if (isNaN(id)) {
@@ -314,12 +321,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Méthodes PUT et DELETE (optionnel)
-export async function PUT(request: NextRequest) {
+// Méthodes OPTIONNELLES
+export async function PUT(
+  request: NextRequest,
+  context: RouteContext
+) {
   try {
-    const pathname = request.nextUrl.pathname
-    const segments = pathname.split('/')
-    const idString = segments[segments.length - 1]
+    const params = await context.params
+    const idString = params.id
     const id = parseInt(idString)
     
     if (isNaN(id)) {
@@ -329,6 +338,7 @@ export async function PUT(request: NextRequest) {
       )
     }
     
+    // Logique de mise à jour ici
     return NextResponse.json(
       { success: false, error: 'Méthode PUT non implémentée' },
       { status: 501 }
@@ -342,11 +352,13 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(
+  request: NextRequest,
+  context: RouteContext
+) {
   try {
-    const pathname = request.nextUrl.pathname
-    const segments = pathname.split('/')
-    const idString = segments[segments.length - 1]
+    const params = await context.params
+    const idString = params.id
     const id = parseInt(idString)
     
     if (isNaN(id)) {
@@ -356,6 +368,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
     
+    // Logique de suppression ici
     return NextResponse.json(
       { success: false, error: 'Méthode DELETE non implémentée' },
       { status: 501 }
