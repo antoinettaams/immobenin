@@ -13,7 +13,9 @@ import {
   MapPin,
   Camera,
   DollarSign,
-  Globe
+  Globe,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { ListingData } from '../PublishFlow';
 
@@ -22,6 +24,8 @@ interface ReviewStepProps {
   onEdit: (step: number) => void;
   onSubmit: () => void;
   onBack: () => void;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
 export const ReviewStep: React.FC<ReviewStepProps> = ({
@@ -29,6 +33,8 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   onEdit,
   onSubmit,
   onBack,
+  isLoading = false,
+  error = null
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -184,6 +190,20 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
 
     // Section Type (toujours présente)
     sections.push({
+      id: 0,
+      title: 'Informations de contact',
+      icon: Users,
+      content: (
+        <div>
+          <div className="font-bold text-sm sm:text-base">{data.owner.nom}</div>
+          <div className="text-gray-600 text-xs sm:text-sm mt-0.5">{data.owner.email}</div>
+          <div className="text-xs text-gray-500 mt-1">{data.owner.telephone}</div>
+        </div>
+      )
+    });
+
+    // Section Type d'espace
+    sections.push({
       id: 1,
       title: 'Type d\'espace',
       icon: propertyType.category === 'house' ? Home : 
@@ -191,7 +211,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
       content: getTypeContent()
     });
 
-    // Section Localisation (toujours présente)
+    // Section Localisation
     sections.push({
       id: 2,
       title: 'Localisation',
@@ -207,7 +227,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
       )
     });
 
-    // Section Caractéristiques (toujours présente)
+    // Section Caractéristiques
     sections.push({
       id: 3,
       title: 'Caractéristiques',
@@ -215,74 +235,80 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
       content: getBasicsContent()
     });
 
-    // Section Équipements (toujours présente)
-    sections.push({
-      id: 4,
-      title: 'Équipements',
-      icon: Star,
-      content: (
-        <div>
-          <div className="font-bold text-sm sm:text-base">{data.amenities.length} équipements</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2 line-clamp-2">
-            {data.amenities.length > 0 
-              ? `${data.amenities.slice(0, 3).join(', ')}${data.amenities.length > 3 ? ` et ${data.amenities.length - 3} autres` : ''}`
-              : 'Aucun équipement sélectionné'
-            }
+    // Section Équipements
+    if (data.amenities && data.amenities.length > 0) {
+      sections.push({
+        id: 4,
+        title: 'Équipements',
+        icon: Star,
+        content: (
+          <div>
+            <div className="font-bold text-sm sm:text-base">{data.amenities.length} équipements</div>
+            <div className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2 line-clamp-2">
+              {data.amenities.slice(0, 3).join(', ')}
+              {data.amenities.length > 3 && ` et ${data.amenities.length - 3} autres`}
+            </div>
           </div>
-        </div>
-      )
-    });
+        )
+      });
+    }
 
-    // Section Photos (toujours présente)
-    sections.push({
-      id: 5,
-      title: 'Photos',
-      icon: Camera,
-      content: (
-        <div>
-          <div className="font-bold text-sm sm:text-base">{data.photos.length} photos</div>
-          <div className="text-gray-600 text-xs mt-0.5 sm:mt-1">
-            {data.photos.filter(p => p.isPrimary).length > 0 
-              ? 'Photo de couverture sélectionnée' 
-              : 'Aucune photo de couverture'
-            }
+    // Section Photos
+    if (data.photos && data.photos.length > 0) {
+      sections.push({
+        id: 5,
+        title: 'Photos',
+        icon: Camera,
+        content: (
+          <div>
+            <div className="font-bold text-sm sm:text-base">{data.photos.length} photos</div>
+            <div className="text-gray-600 text-xs mt-0.5 sm:mt-1">
+              {data.photos.filter(p => p.isPrimary).length > 0 
+                ? 'Photo de couverture sélectionnée' 
+                : 'Aucune photo de couverture'
+              }
+            </div>
           </div>
-        </div>
-      )
-    });
+        )
+      });
+    }
 
-    // Section Titre (toujours présente)
-    sections.push({
-      id: 6,
-      title: 'Titre',
-      content: (
-        <div>
-          <div className="font-bold text-sm sm:text-base line-clamp-2">{data.title || 'Aucun titre'}</div>
-          <div className="text-gray-600 text-xs mt-0.5 sm:mt-1">
-            {data.title?.length || 0} caractères
+    // Section Titre
+    if (data.title) {
+      sections.push({
+        id: 6,
+        title: 'Titre',
+        content: (
+          <div>
+            <div className="font-bold text-sm sm:text-base line-clamp-2">{data.title}</div>
+            <div className="text-gray-600 text-xs mt-0.5 sm:mt-1">
+              {data.title.length} caractères
+            </div>
           </div>
-        </div>
-      )
-    });
+        )
+      });
+    }
 
-    // Section Description (toujours présente)
-    sections.push({
-      id: 7,
-      title: 'Description',
-      content: (
-        <div>
-          <div className="font-bold text-sm sm:text-base">4 sections complétées</div>
-          <div className="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1">
-            {data.description.summary ? '✓ ' : '✗ '}Résumé • 
-            {data.description.spaceDescription ? ' ✓ ' : ' ✗ '}L'espace • 
-            {data.description.guestAccess ? ' ✓ ' : ' ✗ '}Accès • 
-            {data.description.neighborhood ? ' ✓ ' : ' ✗ '}Quartier
+    // Section Description
+    if (data.description && Object.values(data.description).some(val => val)) {
+      sections.push({
+        id: 7,
+        title: 'Description',
+        content: (
+          <div>
+            <div className="font-bold text-sm sm:text-base">4 sections complétées</div>
+            <div className="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1">
+              {data.description.summary ? '✓ ' : '✗ '}Résumé • 
+              {data.description.spaceDescription ? ' ✓ ' : ' ✗ '}L'espace • 
+              {data.description.guestAccess ? ' ✓ ' : ' ✗ '}Accès • 
+              {data.description.neighborhood ? ' ✓ ' : ' ✗ '}Quartier
+            </div>
           </div>
-        </div>
-      )
-    });
+        )
+      });
+    }
 
-    // Section Prix (toujours présente)
+    // Section Prix
     sections.push({
       id: 8,
       title: 'Prix',
@@ -333,12 +359,14 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   };
 
   const handlePublish = async () => {
+    if (isLoading) return;
+    
     setIsSubmitting(true);
-    // Simuler l'envoi des données
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log('Publication des données:', data);
-    setIsSubmitting(false);
-    onSubmit();
+    try {
+      await onSubmit();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -352,6 +380,17 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
           Vérifiez que toutes les informations sont correctes
         </p>
       </div>
+
+      {/* Message d'erreur */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-red-800 font-medium">Erreur</p>
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         {/* Colonne gauche : Récapitulatif */}
@@ -416,12 +455,12 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Photos</span>
-                  <span className="font-bold text-sm sm:text-base">{data.photos.length}</span>
+                  <span className="font-bold text-sm sm:text-base">{data.photos?.length || 0}</span>
                 </div>
                 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Équipements</span>
-                  <span className="font-bold text-sm sm:text-base">{data.amenities.length}</span>
+                  <span className="font-bold text-sm sm:text-base">{data.amenities?.length || 0}</span>
                 </div>
               </div>
             </div>
@@ -478,6 +517,35 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                   </span>
                 </label>
               </div>
+            </div>
+
+            {/* Boutons d'action */}
+            <div className="space-y-3">
+              <button
+                onClick={handlePublish}
+                disabled={isLoading || isSubmitting}
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading || isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Publication en cours...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-5 h-5" />
+                    Publier l'annonce
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={onBack}
+                disabled={isLoading || isSubmitting}
+                className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Retour
+              </button>
             </div>
           </div>
         </div>

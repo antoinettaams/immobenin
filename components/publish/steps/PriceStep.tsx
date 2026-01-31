@@ -23,7 +23,6 @@ export const PriceStep: React.FC<PriceStepProps> = ({
 }) => {
   const [price, setPrice] = useState(data.basePrice || 0);
   const [timeUnit, setTimeUnit] = useState('nuit'); // Par défaut
-  const [cleaningFee, setCleaningFee] = useState(data.cleaningFee || 0);
 
   // Unités de temps disponibles selon le type de bien
   const getAvailableTimeUnits = () => {
@@ -47,27 +46,21 @@ export const PriceStep: React.FC<PriceStepProps> = ({
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value) || 0;
     setPrice(value);
-    updateData();
-  };
-
-  const handleCleaningChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value) || 0;
-    setCleaningFee(value);
-    updateData();
+    updateData(value);
   };
 
   const handleTimeUnitChange = (unit: string) => {
     setTimeUnit(unit);
-    updateData();
+    updateData(price);
   };
 
-  const updateData = () => {
+  const updateData = (newPrice: number) => {
     onUpdate({
-      basePrice: price,
+      basePrice: newPrice,
       currency: 'FCFA',
       weeklyDiscount: 0,
       monthlyDiscount: 0,
-      cleaningFee: cleaningFee,
+      cleaningFee: 0, // Frais de nettoyage retirés
       extraGuestFee: 0,
       securityDeposit: 0
     });
@@ -95,6 +88,16 @@ export const PriceStep: React.FC<PriceStepProps> = ({
 
   const Icon = getCategoryIcon();
   const categoryLabel = getCategoryLabel();
+
+  // Calcul des frais de service (0%)
+  const calculateServiceFee = (basePrice: number) => {
+    return 0; // Aucun frais de service
+  };
+
+  // Prix total pour l'utilisateur (identique au prix de base)
+  const calculateTotalPrice = (basePrice: number) => {
+    return basePrice; // Prix net = prix de base
+  };
 
   return (
     <div className="max-w-md mx-auto">
@@ -155,51 +158,6 @@ export const PriceStep: React.FC<PriceStepProps> = ({
               FCFA
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-2">
-            Les clients verront : {formatPrice(Math.round(price * 1.14))} (inclut les frais de service)
-          </p>
-        </div>
-
-        {/* Frais de nettoyage (optionnel) */}
-        <div className="bg-white p-6 rounded-xl border">
-          <label className="block text-lg font-medium text-gray-900 mb-3">
-            Frais de nettoyage (optionnel)
-          </label>
-          <div className="relative">
-            <input
-              type="number"
-              value={cleaningFee || ''}
-              onChange={handleCleaningChange}
-              className="w-full px-4 py-4 text-xl border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent outline-none"
-              placeholder="0"
-              min="0"
-            />
-            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-700">
-              FCFA
-            </div>
-          </div>
-          <p className="text-sm text-gray-500 mt-2">
-            Payé une seule fois par réservation
-          </p>
-        </div>
-      </div>
-
-      {/* Résumé simple */}
-      <div className="mb-8 p-6 bg-gray-50 rounded-xl">
-        <h3 className="font-bold text-gray-900 mb-4">Résumé</h3>
-        
-        <div className="space-y-3">
-          <div className="flex justify-between">
-            <span>Prix total :</span>
-            <span className="font-medium">{formatPrice(price)} / {timeUnit}</span>
-          </div>
-          
-          {cleaningFee > 0 && (
-            <div className="flex justify-between">
-              <span>Frais de nettoyage :</span>
-              <span className="font-medium">+ {formatPrice(cleaningFee)}</span>
-            </div>
-          )}
         </div>
       </div>
     </div>
