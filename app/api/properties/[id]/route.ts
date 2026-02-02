@@ -2,6 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma' // ✅ Déjà initialisé, PAS BESOIN de new PrismaClient()
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 type RouteContext = {
   params: Promise<{ id: string }>
 }
