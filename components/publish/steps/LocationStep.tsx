@@ -14,7 +14,7 @@ interface LocationData {
   longitude?: number;
 }
 
-interface LocationStepProps {
+interface LocationStepProps { 
   data: LocationData;
   onUpdate: (data: LocationData) => void;
   onNext: () => void;
@@ -32,33 +32,85 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   const [address, setAddress] = useState(data.address || "");
   const [showLocationButton, setShowLocationButton] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const [mapHeight, setMapHeight] = useState(420);
+  const [mapHeight, setMapHeight] = useState(300);
   const [searchMode, setSearchMode] = useState<'address' | 'pin'>('address');
   const [showPinInstruction, setShowPinInstruction] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const updateMapHeight = () => {
+    const handleResize = () => {
       const width = window.innerWidth;
       const height = window.innerHeight;
+      const isMobile = width < 768;
       
-      // Sur mobile, on essaie d'occuper une part importante de l'écran sans le noyer
-      if (width < 640) setMapHeight(Math.min(height * 0.5, 350)); 
-      else if (width < 768) setMapHeight(380);
-      else if (width < 1024) setMapHeight(400);
-      else setMapHeight(450);
+      if (isMobile) {
+        // Sur mobile, on réduit la hauteur quand le clavier est visible
+        if (keyboardVisible) {
+          setMapHeight(height * 0.3);
+        } else {
+          setMapHeight(height * 0.4);
+        }
+      } else if (width < 1024) {
+        setMapHeight(380);
+      } else {
+        setMapHeight(450);
+      }
     };
-    updateMapHeight();
-    window.addEventListener("resize", updateMapHeight);
-    return () => window.removeEventListener("resize", updateMapHeight);
-  }, []);
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    
+    // Détection de l'ouverture/fermeture du clavier sur mobile
+    const handleFocus = () => {
+      if (window.innerWidth < 768) {
+        setKeyboardVisible(true);
+        setTimeout(handleResize, 100); // Petit délai pour laisser le clavier s'ouvrir
+      }
+    };
+
+    const handleBlur = () => {
+      if (window.innerWidth < 768) {
+        setKeyboardVisible(false);
+        setTimeout(handleResize, 100);
+      }
+    };
+
+    const inputElement = inputRef.current;
+    if (inputElement) {
+      inputElement.addEventListener('focus', handleFocus);
+      inputElement.addEventListener('blur', handleBlur);
+    }
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (inputElement) {
+        inputElement.removeEventListener('focus', handleFocus);
+        inputElement.removeEventListener('blur', handleBlur);
+      }
+    };
+  }, [keyboardVisible]);
+
+  // Fermer le panneau de suggestion quand on clique ailleurs
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showLocationButton && containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowLocationButton(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showLocationButton]);
 
   const handleAddressSubmit = () => {
     if (!address.trim()) return;
     setIsLoadingLocation(true);
+    setShowLocationButton(false); // Fermer le panneau de suggestions
     
+    // Simuler un délai pour la recherche
     setTimeout(() => {
       let lat = 6.3725;
       let lng = 2.3542;
@@ -101,6 +153,8 @@ export const LocationStep: React.FC<LocationStepProps> = ({
 
   const useCurrentLocation = () => {
     setIsLoadingLocation(true);
+    setShowLocationButton(false); // Fermer le panneau
+    
     if (!navigator.geolocation) {
       alert("Géolocalisation non supportée");
       setIsLoadingLocation(false);
@@ -133,34 +187,39 @@ export const LocationStep: React.FC<LocationStepProps> = ({
 
   const switchToPinMode = () => {
     setSearchMode('pin');
+    setShowLocationButton(false); // Fermer le panneau si ouvert
     setShowPinInstruction(true);
     setTimeout(() => setShowPinInstruction(false), 5000);
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8" ref={containerRef}>
-      {/* TITRE */}
-      <div className="mb-5 sm:mb-8">
-        <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+    <div 
+      className="w-full max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-8"
+      ref={containerRef}
+      style={{ minHeight: keyboardVisible ? '100vh' : 'auto' }}
+    >
+      {/* TITRE - Réduit sur mobile */}
+      <div className="mb-4 sm:mb-8">
+        <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
           Où est situé votre logement ?
         </h1>
-        <p className="text-sm sm:text-base text-gray-600">
+        <p className="text-xs sm:text-sm text-gray-600">
           Votre adresse est uniquement communiquée aux voyageurs après réservation.
         </p>
       </div>
 
-      {/* BANDEAU INSTRUCTION (Caché sur très petit mobile pour gagner de la place si besoin, ou réduit) */}
-      <div className="mb-5">
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 sm:p-4">
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex p-2 bg-blue-100 rounded-lg">
-              <MapPin className="w-5 h-5 text-blue-600" />
+      {/* BANDEAU INSTRUCTION - Optionnel sur mobile très petit */}
+      <div className="mb-4 sm:mb-5">
+        <div className="bg-blue-50 border border-blue-100 rounded-lg sm:rounded-xl p-2 sm:p-4">
+          <div className="flex items-start gap-2 sm:gap-3">
+            <div className="hidden sm:flex p-2 bg-blue-100 rounded-lg shrink-0 mt-0.5">
+              <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
             </div>
-            <div>
-              <p className="font-semibold text-blue-900 text-sm sm:text-base">
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-blue-900 text-xs sm:text-sm">
                 {searchMode === 'address' ? "1. Saisissez l'adresse" : "2. Ajustez le curseur"}
               </p>
-              <p className="text-xs sm:text-sm text-blue-700">
+              <p className="text-xs text-blue-700 mt-0.5">
                 {searchMode === 'address' 
                   ? "Entrez le nom de la rue ou du quartier." 
                   : "Déplacez le pin pour l'emplacement exact."}
@@ -172,7 +231,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
 
       {/* ZONE CARTE */}
       <div 
-        className="relative rounded-2xl overflow-hidden w-full mb-6 border border-gray-200 shadow-sm"
+        className="relative rounded-xl sm:rounded-2xl overflow-hidden w-full mb-4 sm:mb-6 border border-gray-200 shadow-sm"
         style={{ height: `${mapHeight}px` }}
       >
         <MapComponent
@@ -183,10 +242,11 @@ export const LocationStep: React.FC<LocationStepProps> = ({
         />
 
         {/* BARRE DE RECHERCHE SUR LA CARTE */}
-        <div className="absolute top-3 sm:top-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[85%] max-w-xl z-10">
-          <div className="bg-white rounded-full shadow-xl flex items-center px-3 sm:px-5 py-2 sm:py-3 gap-2 border border-gray-100">
+        <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 w-[95%] sm:w-[85%] max-w-xl z-10">
+          <div className="bg-white rounded-full shadow-lg sm:shadow-xl flex items-center px-3 sm:px-4 py-2 gap-2 border border-gray-100">
             <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
             <input
+              ref={inputRef}
               type="text"
               placeholder="Adresse, quartier..."
               value={address}
@@ -201,7 +261,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
             <button
               onClick={handleAddressSubmit}
               disabled={!address.trim() || isLoadingLocation}
-              className="bg-blue-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="bg-blue-600 text-white px-3 py-1.5 rounded-full text-xs font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 shrink-0"
             >
               {isLoadingLocation ? "..." : "OK"}
             </button>
@@ -209,14 +269,14 @@ export const LocationStep: React.FC<LocationStepProps> = ({
 
           {/* SUGGESTION POSITION ACTUELLE */}
           {showLocationButton && (
-            <div className="mt-2 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-1">
+            <div className="mt-2 bg-white rounded-lg sm:rounded-xl shadow-lg border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-1 max-h-[200px] overflow-y-auto">
               <button
                 onClick={useCurrentLocation}
                 disabled={isLoadingLocation}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 hover:bg-gray-50 transition-colors text-left border-b border-gray-100"
               >
-                <Navigation className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-gray-700">
+                <Navigation className="w-4 h-4 text-blue-600 shrink-0" />
+                <span className="text-xs sm:text-sm font-medium text-gray-700">
                   {isLoadingLocation ? "Localisation..." : "Utiliser ma position actuelle"}
                 </span>
               </button>
@@ -224,40 +284,43 @@ export const LocationStep: React.FC<LocationStepProps> = ({
           )}
         </div>
 
-        {/* OVERLAY INSTRUCTION PIN (MOBILE OPTIMIZED) */}
+        {/* OVERLAY INSTRUCTION PIN - Position optimisée */}
         {showPinInstruction && searchMode === 'pin' && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-10">
-            <div className="bg-blue-600 text-white rounded-xl shadow-2xl p-3 sm:p-4 flex items-center gap-3">
-              <Crosshair className="w-5 h-5 shrink-0" />
-              <p className="text-xs sm:text-sm font-medium flex-1">
+          <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-md z-10">
+            <div className="bg-blue-600 text-white rounded-lg sm:rounded-xl shadow-lg p-2.5 sm:p-3 flex items-start gap-2 sm:gap-3">
+              <Crosshair className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5" />
+              <p className="text-xs font-medium flex-1">
                 Faites glisser la carte pour centrer le marqueur sur votre porte.
               </p>
-              <button onClick={() => setShowPinInstruction(false)} className="p-1">
-                <X className="w-4 h-4" />
+              <button 
+                onClick={() => setShowPinInstruction(false)} 
+                className="p-0.5 shrink-0"
+              >
+                <X className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
             </div>
           </div>
         )}
 
-        {/* BOUTON PIN MANUEL (Quick Action) */}
+        {/* BOUTON PIN MANUEL - Taille réduite sur mobile */}
         {searchMode === 'address' && !showLocationButton && (
           <button
             onClick={switchToPinMode}
-            className="absolute bottom-4 right-4 bg-white rounded-full shadow-lg p-3 border border-gray-200 active:scale-95 transition-transform z-10"
+            className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 bg-white rounded-full shadow-md sm:shadow-lg p-2 sm:p-3 border border-gray-200 active:scale-95 transition-transform z-10"
           >
-            <Crosshair className="w-6 h-6 text-gray-700" />
+            <Crosshair className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" />
           </button>
         )}
       </div>
 
-      {/* RÉSUMÉ FINAL */}
-      {(address || data.latitude) && (
-        <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex items-start gap-3">
-          <div className="p-2 bg-gray-100 rounded-lg shrink-0">
-            <MapPin className="w-5 h-5 text-gray-600" />
+      {/* RÉSUMÉ FINAL - Optionnel sur mobile si peu d'espace */}
+      {(address || data.latitude) && !keyboardVisible && (
+        <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-sm flex items-start gap-2 sm:gap-3">
+          <div className="p-1.5 sm:p-2 bg-gray-100 rounded-lg shrink-0">
+            <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-900 truncate">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
               {address || "Point sélectionné sur la carte"}
             </p>
             <p className="text-xs text-gray-500 mt-0.5">

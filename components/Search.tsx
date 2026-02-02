@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Search as SearchIcon, Map, Wifi, Home, Users, Bath, Bed, X, Phone, Check, ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Search as SearchIcon, Map, Wifi, Home, Users, Bath, Bed, X, Phone, Check, ChevronLeft, ChevronRight, Calendar, Clock, Image as ImageIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SearchProps {
@@ -40,7 +40,7 @@ interface Property {
   capacity: number;
   bedrooms: number;
   bathrooms: number;
-  images: string[];
+  images: string[]; // Images réelles de la base
   wifi: boolean;
   amenities: string[];
   equipementsDetails?: EquipementDetail[];
@@ -85,6 +85,229 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
 
+  // Fonction pour convertir blob URL en base64
+  const convertBlobToBase64 = async (blobUrl: string): Promise<string> => {
+    try {
+      const response = await fetch(blobUrl);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Erreur conversion blob en base64:', error);
+      return '';
+    }
+  };
+
+  // Fonction pour normaliser les données de l'API - CORRIGÉE (maintenant async)
+  const normalizePropertyData = async (apiData: any): Promise<Property> => {
+    console.log('🔄 Normalisation des données API:', apiData);
+    
+    // Gestion de la description
+    let description: string | PropertyDescription;
+    
+    if (typeof apiData.description === 'string') {
+      description = apiData.description;
+    } else if (apiData.fullDescription && typeof apiData.fullDescription === 'object') {
+      description = {
+        summary: apiData.fullDescription.summary || '',
+        spaceDescription: apiData.fullDescription.spaceDescription || '',
+        guestAccess: apiData.fullDescription.guestAccess || '',
+        neighborhoodInfo: apiData.fullDescription.neighborhoodInfo || '',
+      };
+    } else if (apiData.description && typeof apiData.description === 'object') {
+      description = {
+        summary: apiData.description.summary || '',
+        spaceDescription: apiData.description.spaceDescription || '',
+        guestAccess: apiData.description.guestAccess || '',
+        neighborhoodInfo: apiData.description.neighborhoodInfo || '',
+      };
+    } else {
+      description = '';
+    }
+
+    // IMAGES RÉELLES - CORRIGÉ (maintenant avec async/await)
+    let images: string[] = [];
+    if (apiData.images && Array.isArray(apiData.images)) {
+      // Filtre simple pour le moment - on ne peut pas convertir les blobs car ils ont expiré
+      images = apiData.images
+        .filter((img: any) => {
+          if (typeof img !== 'string') return false;
+          
+          const trimmed = img.trim();
+          // Ne pas inclure les URLs blob (elles ne sont plus valides)
+          if (trimmed.startsWith('blob:')) {
+            console.log(`⚠️ URL blob ignorée: ${trimmed.substring(0, 50)}...`);
+            return false;
+          }
+          
+          return trimmed.length > 10;
+        })
+        .map((img: string) => {
+          const trimmed = img.trim();
+          
+          // Nettoyer les base64
+          if (trimmed.startsWith('data:image')) {
+            return trimmed.replace('...[BASE64_TROP_LONG]', '');
+          }
+          
+          // Pour Cloudinary, forcer HTTPS
+          if (trimmed.includes('cloudinary.com') && trimmed.startsWith('http://')) {
+            return trimmed.replace('http://', 'https://');
+          }
+          
+          return trimmed;
+        });
+    }
+    
+    console.log(`📸 Images normalisées: ${images.length}`);
+    if (images.length > 0) {
+      console.log(`🔍 Première image: ${images[0].substring(0, 80)}...`);
+    }
+
+    // Normaliser le propriétaire
+    const owner = {
+      name: apiData.owner?.name || 'Propriétaire',
+      phone: apiData.owner?.phone || '',
+      email: apiData.owner?.email || '',
+      id: apiData.owner?.id
+    };
+
+    // Normaliser les équipements
+    const amenitiesDetails = apiData.amenitiesDetails || [];
+    const amenities = apiData.amenities || [];
+
+    return {
+      id: apiData.id,
+      title: apiData.title || '',
+      type: apiData.type || '',
+      category: apiData.category || 'HOUSE',
+      subType: apiData.subType || '',
+      location: apiData.location || '',
+      city: apiData.city || '',
+      address: apiData.address || '',
+      price: apiData.price || 0,
+      currency: apiData.currency || 'FCFA',
+      capacity: apiData.capacity || 0,
+      bedrooms: apiData.bedrooms || 0,
+      bathrooms: apiData.bathrooms || 0,
+      
+      // IMAGES RÉELLES CORRIGÉES
+      images: images,
+      
+      wifi: apiData.wifi || false,
+      amenities: amenities,
+      equipementsDetails: amenitiesDetails,
+      description,
+      owner,
+      size: apiData.size,
+      floors: apiData.floors,
+      isPublished: apiData.isPublished || false,
+      
+      // Champs spécifiques
+      maxGuests: apiData.maxGuests,
+      employees: apiData.employees,
+      eventCapacity: apiData.eventCapacity,
+      parkingSpots: apiData.parkingSpots,
+      meetingRooms: apiData.meetingRooms,
+      
+      // Informations de prix
+      cleaningFee: apiData.cleaningFee,
+      extraGuestFee: apiData.extraGuestFee,
+      securityDeposit: apiData.securityDeposit,
+      weeklyDiscount: apiData.weeklyDiscount,
+      monthlyDiscount: apiData.monthlyDiscount,
+      
+      createdAt: apiData.createdAt ? new Date(apiData.createdAt) : undefined,
+      updatedAt: apiData.updatedAt ? new Date(apiData.updatedAt) : undefined
+    };
+  };
+
+  // Composant pour afficher une image avec fallback - CORRIGÉ
+  const PropertyImageDisplay = ({ 
+    src, 
+    alt, 
+    className = "", 
+    fallback = true,
+    propertyId
+  }: { 
+    src: string; 
+    alt: string; 
+    className?: string;
+    fallback?: boolean;
+    propertyId?: number;
+  }) => {
+    const [hasError, setHasError] = useState(false);
+    const [imgSrc, setImgSrc] = useState<string>('');
+
+    useEffect(() => {
+      if (src && src.trim().length > 10) {
+        let cleanedSrc = src.trim();
+        
+        // Nettoyer les base64
+        if (cleanedSrc.startsWith('data:image')) {
+          cleanedSrc = cleanedSrc.replace('...[BASE64_TROP_LONG]', '');
+        }
+        
+        // Cloudinary HTTPS
+        if (cleanedSrc.includes('cloudinary.com') && cleanedSrc.startsWith('http://')) {
+          cleanedSrc = cleanedSrc.replace('http://', 'https://');
+        }
+        
+        // Ne pas essayer d'afficher les URLs blob (elles ne sont pas persistantes)
+        if (cleanedSrc.startsWith('blob:')) {
+          console.log(`⚠️ URL blob détectée, utilisation du placeholder pour ${alt}`);
+          setImgSrc('');
+          setHasError(true);
+          return;
+        }
+        
+        setImgSrc(cleanedSrc);
+        setHasError(false);
+      } else {
+        setImgSrc('');
+        setHasError(true);
+      }
+    }, [src, alt]);
+
+    const handleError = () => {
+      console.log(`❌ Erreur image: ${alt.substring(0, 30)}`);
+      setHasError(true);
+    };
+
+    // Si pas d'image ou erreur
+    if (!imgSrc || hasError || imgSrc === '') {
+      if (!fallback) return null;
+      
+      return (
+        <div className={`${className} bg-gray-200 flex items-center justify-center`}>
+          <div className="text-center p-4">
+            <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+            <span className="text-gray-500 text-xs">Image non disponible</span>
+            {propertyId && (
+              <span className="text-gray-400 text-xs block mt-1">Bien #{propertyId}</span>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <img
+        src={imgSrc}
+        alt={alt}
+        className={className}
+        onError={handleError}
+        loading="lazy"
+        crossOrigin="anonymous"
+        onLoad={() => console.log(`✅ Image chargée: ${alt.substring(0, 30)}`)}
+      />
+    );
+  };
+
   // Détecter si on est sur mobile
   useEffect(() => {
     const checkMobile = () => {
@@ -114,8 +337,16 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
       const response = await fetch(`/api/properties?${params.toString()}`);
       const data = await response.json();
       
+      console.log('📋 DONNÉES LISTE API:', data);
+      
       if (data.success) {
-        setFilteredProperties(data.data);
+        // Normaliser les propriétés avec await
+        const normalizedPropertiesPromises = data.data.map((property: any) => normalizePropertyData(property));
+        const normalizedProperties = await Promise.all(normalizedPropertiesPromises);
+        
+        console.log('✨ PROPRIÉTÉS NORMALISÉES:', normalizedProperties);
+        
+        setFilteredProperties(normalizedProperties);
       } else {
         console.error('Erreur lors du chargement des propriétés:', data.error);
       }
@@ -128,18 +359,37 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
 
   const fetchPropertyDetails = async (id: number) => {
     try {
+      console.log(`🔍 Chargement des détails pour l'ID: ${id}`);
+      console.log(`🔗 URL: /api/properties/${id}`);
+      
       const response = await fetch(`/api/properties/${id}`);
+      console.log(`📊 Statut de la réponse: ${response.status}`);
+      
       const data = await response.json();
+      console.log('📦 DONNÉES DÉTAILS API:', data);
       
       if (data.success) {
-        setSelectedProperty(data.data);
+        const normalizedProperty = await normalizePropertyData(data.data);
+        console.log('✨ DONNÉES DÉTAILS NORMALISÉES:', normalizedProperty);
+        console.log('📸 Images réelles:', normalizedProperty.images);
+        console.log('🔢 Nombre d\'images:', normalizedProperty.images.length);
+        
+        // Afficher chaque URL d'image
+        normalizedProperty.images.forEach((img, index) => {
+          console.log(`   Image ${index + 1}: ${img.substring(0, 100)}${img.length > 100 ? '...' : ''}`);
+        });
+        
+        setSelectedProperty(normalizedProperty);
         setCurrentImageIndex(0);
         document.body.style.overflow = 'hidden';
       } else {
-        console.error('Erreur lors du chargement des détails:', data.error);
+        console.error('Erreur API:', data.error);
+        alert(`Erreur: ${data.error}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur réseau:', error);
+      console.error('Stack:', error.stack);
+      alert('Erreur réseau lors du chargement des détails');
     }
   };
 
@@ -148,6 +398,8 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
   };
 
   const handlePropertyClick = (property: Property): void => {
+    console.log('🎯 Propriété cliquée:', property);
+    console.log('📸 Images réelles:', property.images);
     fetchPropertyDetails(property.id);
   };
 
@@ -158,19 +410,15 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
 
   // Fonction pour formater le numéro WhatsApp
   const formatWhatsAppNumber = (phoneNumber: string): string => {
-    // Supprimer tous les caractères non numériques
     let cleaned = phoneNumber.replace(/\D/g, '');
     
-    // Si le numéro commence par 0, le remplacer par l'indicatif du Bénin (229)
     if (cleaned.startsWith('0')) {
       cleaned = '229' + cleaned.substring(1);
     }
     
-    // Si le numéro commence par +229, enlever le +
     if (cleaned.startsWith('229')) {
       cleaned = cleaned;
     } else if (cleaned.length === 9 && !cleaned.startsWith('229')) {
-      // Si c'est un numéro local de 9 chiffres, ajouter l'indicatif
       cleaned = '229' + cleaned;
     }
     
@@ -189,7 +437,6 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
     let message = `Bonjour ${property.owner.name},\n\n`;
     message += `Je suis intéressé(e) par votre bien "${property.title}" à ${property.location}, ${property.city}.\n\n`;
     
-    // Informations de réservation
     message += `📋 **Informations de réservation :**\n`;
     message += `• Type de bien : ${property.type}\n`;
     message += `• Capacité : ${property.capacity} personne(s)\n`;
@@ -198,7 +445,6 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
       message += `• Nombre de voyageurs : ${guests}\n`;
     }
     
-    // Informations de prix
     message += `\n💰 **Informations tarifaires :**\n`;
     message += `• Prix par nuit : ${property.price.toLocaleString("fr-FR")} ${property.currency}\n`;
     
@@ -210,7 +456,6 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
       message += `• Caution : ${property.securityDeposit.toLocaleString("fr-FR")} ${property.currency}\n`;
     }
     
-    // Questions
     message += `\n❓ **Mes questions :**\n`;
     message += `1. Le bien est-il disponible ?\n`;
     message += `2. Quelles sont les modalités de paiement ?\n`;
@@ -225,37 +470,23 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
   const handleWhatsAppReservation = (property: Property, e: React.MouseEvent): void => {
     e.stopPropagation();
     
-    // Formater le numéro WhatsApp du propriétaire
     const whatsappNumber = formatWhatsAppNumber(property.owner.phone);
-    
-    // Créer le message
     const message = createWhatsAppMessage(property);
     const encodedMessage = encodeURIComponent(message);
     
-    // Crée l'URL WhatsApp
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
-    
-    // Ouvre WhatsApp dans un nouvel onglet
     window.open(whatsappUrl, '_blank');
-    
-    // Ferme la modale après redirection
     handleCloseModal();
   };
 
   const handleQuickWhatsApp = (property: Property, e: React.MouseEvent): void => {
     e.stopPropagation();
     
-    // Formater le numéro WhatsApp du propriétaire
     const whatsappNumber = formatWhatsAppNumber(property.owner.phone);
-    
-    // Message plus court pour le bouton rapide
     const quickMessage = `Bonjour ${property.owner.name}, je suis intéressé(e) par "${property.title}" à ${property.location}, ${property.city}. Pourriez-vous m'en dire plus ?`;
     const encodedMessage = encodeURIComponent(quickMessage);
     
-    // Crée l'URL WhatsApp
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
-    
-    // Ouvre WhatsApp
     window.open(whatsappUrl, '_blank');
   };
 
@@ -299,13 +530,8 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
     guests.trim()
   ].filter(Boolean).length;
 
-  // Simuler d'autres images pour la galerie si besoin
-  const propertyImages = selectedProperty ? [
-    ...selectedProperty.images,
-    ...Array.from({ length: Math.max(0, 4 - selectedProperty.images.length) }, (_, i) => 
-      `https://picsum.photos/600/400?random=${selectedProperty.id + i * 100}`
-    )
-  ].filter(Boolean) : [];
+  // Images pour la galerie
+  const propertyImages = selectedProperty ? selectedProperty.images : [];
 
   const nextImage = () => {
     if (propertyImages.length > 0) {
@@ -617,13 +843,13 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                   }}
                   aria-label={`Voir ${property.title} à ${property.location}`}
                 >
-                  {/* Image */}
+                  {/* Image - UTILISER L'IMAGE RÉELLE */}
                   <div className="relative aspect-video overflow-hidden bg-gray-200">
-                    <img 
-                      src={property.images[0] || `https://picsum.photos/600/400?random=${property.id}`} 
+                    <PropertyImageDisplay
+                      src={property.images && property.images.length > 0 ? property.images[0] : ''}
                       alt={property.title}
                       className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
+                      propertyId={property.id}
                     />
                     <div className="absolute top-3 right-3 bg-white/90 px-2 py-1 rounded text-xs font-semibold">
                       {formatPropertyType(property.category, property.subType)}
@@ -805,10 +1031,10 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
               
               {/* Contenu scrollable */}
               <div className="flex-1 overflow-y-auto">
-                {/* Galerie d'images */}
-                {propertyImages.length > 0 && (
+                {/* Galerie d'images RÉELLES */}
+                {propertyImages.length > 0 ? (
                   <div className="relative aspect-video bg-gray-200 overflow-hidden">
-                    <img
+                    <PropertyImageDisplay
                       src={propertyImages[currentImageIndex]}
                       alt={selectedProperty.title}
                       className="w-full h-full object-cover"
@@ -853,6 +1079,13 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                     {/* Badge type */}
                     <div className="absolute top-2 md:top-4 right-2 md:right-4 bg-white/90 px-2 py-1 rounded text-xs font-semibold">
                       {selectedProperty.type}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative aspect-video bg-gray-200 overflow-hidden flex items-center justify-center">
+                    <div className="text-center">
+                      <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">Aucune image disponible</p>
                     </div>
                   </div>
                 )}
@@ -917,12 +1150,6 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                         <div className="text-base md:text-lg font-bold">{selectedProperty.bathrooms}</div>
                       </div>
                     )}
-                    
-                    <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
-                      <Wifi className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
-                      <div className="text-xs md:text-sm text-gray-600">WiFi</div>
-                      <div className="text-base md:text-lg font-bold">{selectedProperty.wifi ? "Oui" : "Non"}</div>
-                    </div>
                   </div>
                   
                   {/* Description */}
@@ -1049,7 +1276,6 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
           </>
         )}
       </AnimatePresence>
-
     </motion.div>
   );
 };

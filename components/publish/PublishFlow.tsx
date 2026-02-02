@@ -402,167 +402,98 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
   }
 
   // Fonction pour publier - CONNECTÉE À L'API
-  const handlePublish = async () => {
-    console.log('🚀🚀🚀 HANDLEPUBLISH APPELÉ !!! 🚀🚀🚀')
-    console.log('📊 Étape actuelle (doit être 9):', currentStep)
-    console.log('📊 Données complètes:', JSON.stringify(listingData, null, 2))
-    
-    if (stepValidation.isLoading) {
-      console.log('❌ HANDLEPUBLISH bloqué - déjà loading')
-      return
-    }
-    
-    setStepValidation(prev => ({ ...prev, isLoading: true, message: 'Publication en cours...' }))
-    setPublishError(null)
-    
-    try {
-      console.log('📤 Préparation des données pour API...')
-      
-      // 1. Transformer les données pour correspondre au schéma Prisma
-      const prismaData = {
-        // Étape 1: Informations propriétaire
-        onboarding: {
-          telephone: listingData.owner.telephone,
-          email: listingData.owner.email,
-          nom: listingData.owner.nom
-        },
-        
-        // Étape 2: Type de propriété
-        housingType: {
-          category: listingData.propertyType.category.toUpperCase(), // "HOUSE", "OFFICE", "EVENT"
-          subType: listingData.propertyType.subType,
-          privacy: listingData.propertyType.privacy?.toUpperCase() // "ENTIRE", "PRIVATE", "SHARED"
-        },
-        
-        // Étape 3: Localisation
-        location: {
-          country: listingData.location.country,
-          city: listingData.location.city,
-          neighborhood: listingData.location.neighborhood,
-          address: listingData.location.address,
-          postalCode: listingData.location.postalCode,
-          latitude: listingData.location.latitude,
-          longitude: listingData.location.longitude
-        },
-        
-        // Étape 4: Caractéristiques de base
-        basics: {
-          ...listingData.basics,
-          // Conversion en nombres
-          size: listingData.basics.size ? Number(listingData.basics.size) : undefined,
-          floors: listingData.basics.floors ? Number(listingData.basics.floors) : undefined,
-          maxGuests: listingData.basics.maxGuests ? Number(listingData.basics.maxGuests) : undefined,
-          bedrooms: listingData.basics.bedrooms ? Number(listingData.basics.bedrooms) : undefined,
-          beds: listingData.basics.beds ? Number(listingData.basics.beds) : undefined,
-          bathrooms: listingData.basics.bathrooms ? Number(listingData.basics.bathrooms) : undefined,
-          employees: listingData.basics.employees ? Number(listingData.basics.employees) : undefined,
-          offices: listingData.basics.offices ? Number(listingData.basics.offices) : undefined,
-          meetingRooms: listingData.basics.meetingRooms ? Number(listingData.basics.meetingRooms) : undefined,
-          workstations: listingData.basics.workstations ? Number(listingData.basics.workstations) : undefined,
-          eventCapacity: listingData.basics.eventCapacity ? Number(listingData.basics.eventCapacity) : undefined,
-          parkingSpots: listingData.basics.parkingSpots ? Number(listingData.basics.parkingSpots) : undefined,
-          minBookingHours: listingData.basics.minBookingHours ? Number(listingData.basics.minBookingHours) : undefined
-        },
-        
-        // Étape 5: Équipements
-        amenities: listingData.amenities,
-        
-        // Étape 6: Photos - FORMAT CORRECT POUR L'API
-        photos: listingData.photos.map(photo => ({
-          url: photo.url,
-          isPrimary: photo.isPrimary || false
-        })),
-        
-        // Étape 7: Titre
-        title: listingData.title,
-        
-        // Étape 8: Description
-        description: listingData.description,
-        
-        // Étape 9: Prix
-        price: {
-          basePrice: Number(listingData.pricing.basePrice),
-          currency: listingData.pricing.currency,
-          weeklyDiscount: Number(listingData.pricing.weeklyDiscount),
-          monthlyDiscount: Number(listingData.pricing.monthlyDiscount),
-          cleaningFee: Number(listingData.pricing.cleaningFee),
-          extraGuestFee: Number(listingData.pricing.extraGuestFee),
-          securityDeposit: Number(listingData.pricing.securityDeposit)
-        },
-        
-        // Étape 10: Règles
-        rules: {
-          checkInTime: listingData.rules.checkInTime,
-          checkOutTime: listingData.rules.checkOutTime,
-          childrenAllowed: listingData.rules.childrenAllowed
-        }
-      }
-      
-      console.log('📦 Données transformées pour API:', JSON.stringify(prismaData, null, 2))
-      console.log('🌐 Envoi POST à /api/publish...')
-      
-      // 2. Envoie à l'API
-      const response = await fetch('/api/publish', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(prismaData),
-      })
-      
-      console.log('📥 Réponse reçue - Status:', response.status)
-      console.log('📥 Réponse OK?:', response.ok)
-      
-      const result = await response.json()
-      console.log('📥 Réponse JSON:', result)
-      
-      if (!response.ok) {
-        console.error('❌ Erreur API:', result)
-        throw new Error(result.error || result.message || 'Erreur lors de la publication')
-      }
-      
-      console.log('✅ Publication réussie:', result)
-      
-      // 3. Nettoyer le brouillon
-      if (isClient && typeof window !== 'undefined' && window.localStorage) {
-        localStorage.removeItem('draft_listing')
-        console.log('🧹 Brouillon nettoyé')
-      }
-      
-      // 4. Notifier le succès
-      setStepValidation(prev => ({ 
-        ...prev, 
-        isValid: true, 
-        isLoading: false, 
-        message: 'Publication réussie !' 
-      }))
-      
-      // 5. Appeler le callback de complétion
-      if (onComplete) {
-        console.log('📞 Appel onComplete')
-        onComplete()
-      } else {
-        // Redirection par défaut
-        console.log('🔀 Redirection vers /')
-        window.location.href = '/?published=true'
-      }
-      
-    } catch (error: any) {
-      console.error('❌ Erreur de publication:', error)
-      console.error('Stack:', error.stack)
-      
-      setPublishError(error.message || 'Erreur lors de la publication')
-      setStepValidation(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        message: error.message || 'Erreur lors de la publication' 
-      }))
-      
-      // Afficher l'erreur
-      alert(`Erreur de publication: ${error.message || 'Impossible de publier l\'annonce'}`)
-    }
+  // Fonction pour publier - AVEC LOGS DE DÉBOGAGE
+const handlePublish = async () => {
+  console.log('🚀 HANDLEPUBLISH - Début')
+  
+  if (stepValidation.isLoading) {
+    console.log('❌ Publication bloquée: déjà en cours de chargement')
+    return
   }
 
+  setStepValidation(prev => ({ ...prev, isLoading: true }))
+  setPublishError(null)
+
+  try {
+    const formData = new FormData()
+
+    const prismaData = {
+      onboarding: listingData.owner,
+
+      housingType: {
+        category: listingData.propertyType.category.toUpperCase(),
+        subType: listingData.propertyType.subType,
+        privacy: listingData.propertyType.privacy.toUpperCase()
+      },
+
+      location: listingData.location,
+      basics: listingData.basics,
+      amenities: listingData.amenities,
+      title: listingData.title,
+      description: listingData.description,
+
+      price: {
+        basePrice: Number(listingData.pricing.basePrice),
+        currency: listingData.pricing.currency,
+        weeklyDiscount: Number(listingData.pricing.weeklyDiscount),
+        monthlyDiscount: Number(listingData.pricing.monthlyDiscount),
+        cleaningFee: Number(listingData.pricing.cleaningFee),
+        extraGuestFee: Number(listingData.pricing.extraGuestFee),
+        securityDeposit: Number(listingData.pricing.securityDeposit)
+      },
+
+      rules: {
+        checkInTime: listingData.rules.checkInTime,
+        checkOutTime: listingData.rules.checkOutTime,
+        childrenAllowed: listingData.rules.childrenAllowed
+      }
+    }
+
+    console.log('📋 Données préparées:', prismaData)
+    console.log('📸 Nombre de photos:', listingData.photos.length)
+    
+    // ✅ JSON part
+    formData.append("data", JSON.stringify(prismaData))
+
+    // ✅ files part
+    listingData.photos.forEach((photo, index) => {
+      if (photo.file) {
+        console.log(`📤 Ajout photo ${index + 1}:`, photo.file.name, photo.file.type, photo.file.size)
+        formData.append("photos", photo.file)
+      }
+    })
+
+    console.log('📤 Envoi à /api/publish...')
+    
+    const response = await fetch("/api/publish", {
+      method: "POST",
+      body: formData
+    })
+
+    console.log('📊 Statut de la réponse:', response.status)
+    console.log('📊 Headers:', response.headers)
+    
+    const result = await response.json()
+    console.log('📦 Réponse JSON:', result)
+
+    if (!response.ok) {
+      console.error('❌ Erreur API:', result.error)
+      throw new Error(result.error || 'Erreur inconnue')
+    }
+
+    console.log('✅ Publication réussie!')
+    alert("🎉 Publication réussie")
+    window.location.href = "/?published=true"
+
+  } catch (e: any) {
+    console.error('❌ Erreur complète:', e)
+    setPublishError(e.message)
+    alert("Erreur: " + e.message)
+  } finally {
+    setStepValidation(prev => ({ ...prev, isLoading: false }))
+    console.log('🏁 handlePublish terminé')
+  }
+}
   // Rendu de l'étape actuelle
   const renderStep = () => {
     console.log(`🎬 RENDERSTEP - étape ${currentStep}`)

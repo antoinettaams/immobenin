@@ -14,8 +14,8 @@ enum Category {
   EVENT
 }
 
-enum Privacy {
-  ENTIRE
+enum Privacy { 
+  ENTIRE 
   PRIVATE
   SHARED
 }
@@ -77,6 +77,7 @@ model Bien {
   hasStage     Boolean? @default(false)
   hasSoundSystem Boolean? @default(false)
   hasProjector Boolean? @default(false)
+  hasCatering  Boolean?
   minBookingHours Int?
   
   // === TitleStep ===
@@ -106,7 +107,7 @@ model Bien {
   // Relation avec Description (DescriptionStep)
   description   Description?
   
-  // Relation avec équipements (AmenitiesStep)
+  // Relation avec équipements (AmenitiesStep) - UNIQUEMENT UNE FOIS
   equipements  EquipementBien[]
   
   // Timestamps

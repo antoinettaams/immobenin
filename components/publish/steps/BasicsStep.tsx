@@ -11,7 +11,8 @@ import {
   Car, 
   Clock, 
   Sofa, 
-  DoorClosed 
+  DoorClosed,
+  Utensils
 } from "lucide-react";
 
 interface BasicsData {
@@ -35,6 +36,7 @@ interface BasicsData {
   hasStage?: boolean;
   hasSoundSystem?: boolean;
   hasProjector?: boolean;
+  hasCatering?: boolean;
   minBookingHours?: number;
   
   // Commun
@@ -271,6 +273,13 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
             <Counter icon={Bed} label="Lits" description="Nombre total de lits (inclut canapé-lit si applicable)" field="beds" unit="lits" min={1} />
             <Counter icon={Bath} label="Salles de bain" description="Salles de bain complètes avec douche/bain" field="bathrooms" unit="salles" />
             <CheckboxOption icon={DoorClosed} label="Entrée privée" description="Les voyageurs ont leur propre entrée" field="privateEntrance" checked={localData.privateEntrance ?? false} />
+          <CheckboxOption 
+  icon={Utensils} // ou une icône appropriée
+  label="Service de restauration" 
+  description="Catering disponible ou cuisine professionnelle" 
+  field="hasCatering" 
+  checked={localData.hasCatering ?? false} 
+/>
           </>
         )}
 

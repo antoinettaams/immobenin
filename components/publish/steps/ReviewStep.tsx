@@ -323,32 +323,6 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
         </div>
       )
     });
-
-    // Section Règles (seulement pour logements)
-    if (propertyType.category === 'house') {
-      sections.push({
-        id: 9,
-        title: 'Règles',
-        icon: Calendar,
-        content: (
-          <div className="space-y-1.5 sm:space-y-2">
-            <div className="flex items-center gap-2">
-              <Check className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 flex-shrink-0" />
-              <span className="text-xs sm:text-sm">Arrivée: {data.rules.checkInTime}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Check className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 flex-shrink-0" />
-              <span className="text-xs sm:text-sm">Départ: {data.rules.checkOutTime}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Check className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 flex-shrink-0" />
-              <span className="text-xs sm:text-sm">Enfants: {data.rules.childrenAllowed ? 'Autorisés' : 'Non autorisés'}</span>
-            </div>
-          </div>
-        )
-      });
-    }
-
     return sections;
   };
 
@@ -517,35 +491,6 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                   </span>
                 </label>
               </div>
-            </div>
-
-            {/* Boutons d'action */}
-            <div className="space-y-3">
-              <button
-                onClick={handlePublish}
-                disabled={isLoading || isSubmitting}
-                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading || isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Publication en cours...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-5 h-5" />
-                    Publier l'annonce
-                  </>
-                )}
-              </button>
-              
-              <button
-                onClick={onBack}
-                disabled={isLoading || isSubmitting}
-                className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Retour
-              </button>
             </div>
           </div>
         </div>
