@@ -1,8 +1,6 @@
-// app/api/properties/[id]/route.ts - CORRIGÉ COMPLET
+// app/api/properties/[id]/route.ts - CORRIGÉ
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma' 
-
-const prisma = new PrismaClient()
+import prisma from '@/lib/prisma' // ✅ Déjà initialisé dans lib/prisma
 
 type RouteContext = {
   params: Promise<{ id: string }>
@@ -67,10 +65,28 @@ export async function GET(
     console.log(`✅ Bien ${id} trouvé: ${property.title}`);
     console.log(`📊 Images stockées: ${property.images?.length || 0}`);
 
+    // Vérifier le type du champ images
+    let rawImages: any[] = [];
+    
+    if (Array.isArray(property.images)) {
+      rawImages = property.images;
+    } else if (typeof property.images === 'string') {
+      try {
+        rawImages = JSON.parse(property.images);
+      } catch (e) {
+        rawImages = [property.images];
+      }
+    }
+
+    console.log(`🔍 Images brutes (type: ${typeof property.images}):`, rawImages.length);
+    
     // CORRECTION DES IMAGES - Filtrer et nettoyer
-    const cleanImages = (property.images || [])
+    const cleanImages = rawImages
       .filter((img: any) => {
-        if (!img || typeof img !== 'string') return false;
+        if (!img || typeof img !== 'string') {
+          console.warn(`⚠️ Image non-string ignorée:`, img);
+          return false;
+        }
         
         const trimmed = img.trim();
         
@@ -81,7 +97,11 @@ export async function GET(
         }
         
         // Vérifier la longueur minimale
-        return trimmed.length > 10;
+        const isValid = trimmed.length > 10;
+        if (!isValid) {
+          console.warn(`⚠️ URL trop courte ignorée: ${trimmed.substring(0, 30)}...`);
+        }
+        return isValid;
       })
       .map((img: string) => {
         const trimmed = img.trim();
