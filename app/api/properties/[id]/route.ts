@@ -1,6 +1,6 @@
 // app/api/properties/[id]/route.ts - CORRIGÉ COMPLET
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/lib/prisma' 
 
 const prisma = new PrismaClient()
 
