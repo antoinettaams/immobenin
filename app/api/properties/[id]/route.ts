@@ -1,6 +1,6 @@
-// app/api/properties/[id]/route.ts - CORRIGÉ
+// app/api/properties/[id]/route.ts - VERSION FINALE CORRIGÉE
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma' // ✅ Déjà initialisé dans lib/prisma
+import prisma from '@/lib/prisma' // ✅ Déjà initialisé, PAS BESOIN de new PrismaClient()
 
 type RouteContext = {
   params: Promise<{ id: string }>
