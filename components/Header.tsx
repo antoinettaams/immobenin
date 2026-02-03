@@ -199,7 +199,7 @@ export const Header: React.FC = () => {
                    aria-label="Changer la langue"
                  >
                     <Globe className="w-4 h-4" /> FR
-                 </button>
+                  </button>
               </div>
             </nav>
           </motion.div>

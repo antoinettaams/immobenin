@@ -5,7 +5,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 
 const inter = Inter({ subsets: ['latin'] });
-
+ 
 export const metadata: Metadata = {
   title: 'ImmoBenin - Louez ou proposez des espaces au Bénin',
   description: 'Maisons, appartements meublés, bureaux, salles d\'événements ou terrains. Trouvez l\'endroit idéal ou rentabilisez le vôtre.',
