@@ -110,7 +110,7 @@ export const ValuePropSection: React.FC = () => {
     { 
       icon: ShieldCheck, 
       title: "100% Vérifié", 
-      desc: "Tous nos hôtes et locataires passent par une vérification d&apos;identité." 
+      desc: "Tous nos hôtes et locataires passent par une vérification d'identité." 
     },
     { 
       icon: HeartHandshake, 
