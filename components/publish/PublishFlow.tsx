@@ -885,16 +885,27 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
               >
                 <div className="text-brand group-hover:scale-110 transition-transform duration-300">
                   <svg 
-                    width="32" 
-                    height="32" 
-                    viewBox="0 0 32 32" 
-                    fill="currentColor" 
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <path d="M16 2C16 2 3 10 3 18C3 24 8 29 16 31C24 29 29 24 29 18C29 10 16 2 16 2ZM16 19C14.3431 19 13 17.6569 13 16C13 14.3431 14.3431 13 16 13C17.6569 13 19 14.3431 19 16C19 17.6569 17.6569 19 16 19Z" />
-                    <path d="M16 6L24 13V24H8V13L16 6Z" fill="white" fillOpacity="0.3"/>
-                  </svg>
+  width="32" 
+  height="32" 
+  viewBox="0 0 100 100" 
+  fill="none" 
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+>
+  {/* Forme principale (Maison / Pin) */}
+  <path 
+    d="M50 5L15 40V70C15 75 20 80 50 95C80 80 85 75 85 70V40L50 5Z" 
+    fill="#FF385C" 
+  />
+  
+  {/* Cercle central */}
+  <circle cx="50" cy="55" r="12" fill="white" />
+  
+  {/* Fenêtre dans le toit */}
+  <rect x="44" y="24" width="12" height="10" fill="white" />
+  <line x1="50" y1="24" x2="50" y2="34" stroke="#FF385C" strokeWidth="1.5" />
+  <line x1="44" y1="29" x2="56" y2="29" stroke="#FF385C" strokeWidth="1.5" />
+</svg>
                 </div>
                 <span className="text-xl font-extrabold tracking-tight text-gray-900 group-hover:text-brand transition-colors">
                   ImmoBenin
