@@ -78,9 +78,9 @@ export const Header: React.FC = () => {
   <line x1="44" y1="29" x2="56" y2="29" stroke="#FF385C" strokeWidth="1.5" />
 </svg>
           </div>
-          <span className={`text-xl font-extrabold tracking-tight ${scrolled || isMobileMenuOpen ? 'text-brand' : 'text-gray-900'}`}>
-            ImmoBenin
-          </span>
+          <span className="text-xl font-extrabold tracking-tight text-gray-900 group-hover:text-brand transition-colors">
+                  ImmoBenin
+                </span>
         </Link>
 
         {/* Desktop Navigation avec Link */}

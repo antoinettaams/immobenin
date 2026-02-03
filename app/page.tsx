@@ -6,6 +6,8 @@ import { OwnerCTA } from '@/components/CTAHost';
 import { Testimonials } from '@/components/Testimonials';
 import { BeninFocus } from '@/components/BeninFocus';
 import { Header } from '@/components/Header';
+import { StickyNav } from '@/components/Navbar';
+
 export default function HomePage() {
   return (
     <main className="min-h-screen">
@@ -17,6 +19,7 @@ export default function HomePage() {
       <OwnerCTA />
       <Testimonials />
       <BeninFocus />
+      <StickyNav/>
     </main>
   );
 }
