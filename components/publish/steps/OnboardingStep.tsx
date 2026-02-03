@@ -23,6 +23,20 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   const [formData, setFormData] = useState<OnboardingData>(data)
   const [errors, setErrors] = useState<Partial<OnboardingData>>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [phoneInput, setPhoneInput] = useState('') // Stockage séparé pour l'affichage
+
+  // Initialisation depuis les props
+  React.useEffect(() => {
+    if (data.telephone) {
+      // Extraire uniquement les chiffres sans le préfixe +229
+      const digitsOnly = data.telephone.replace(/\D/g, '')
+      if (digitsOnly.startsWith('229')) {
+        setPhoneInput(digitsOnly.slice(3)) // Enlève le 229
+      } else {
+        setPhoneInput(digitsOnly)
+      }
+    }
+  }, [data.telephone])
 
   const handleChange = (field: keyof OnboardingData, value: string) => {
     const updated = { ...formData, [field]: value }
@@ -41,11 +55,14 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Partial<OnboardingData> = {}
     
-    // Validation téléphone (Bénin)
-    if (!formData.telephone) {
+    // Validation téléphone
+    const phoneDigits = phoneInput.replace(/\D/g, '')
+    if (!phoneDigits) {
       newErrors.telephone = 'Le numéro de téléphone est requis'
-    } else if (!/^(?:\+229|00229)?[0-9]{8}$/.test(formData.telephone.replace(/\s/g, ''))) {
-      newErrors.telephone = 'Numéro béninois valide requis (ex: +229 60 00 00 00)'
+    } else if (phoneDigits.length !== 8) {
+      newErrors.telephone = 'Numéro béninois valide requis (8 chiffres)'
+    } else if (!/^[679][0-9]{7}$/.test(phoneDigits)) {
+      newErrors.telephone = 'Numéro béninois invalide (doit commencer par 6, 7 ou 9)'
     }
     
     // Validation email
@@ -66,6 +83,38 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
     return Object.keys(newErrors).length === 0
   }
 
+  const formatPhoneDisplay = (value: string): string => {
+    // Garde uniquement les chiffres
+    const digits = value.replace(/\D/g, '')
+    
+    // Limite à 8 chiffres max
+    const limited = digits.slice(0, 8)
+    
+    // Format pour l'affichage: XX XX XX XX
+    if (limited.length <= 2) return limited
+    if (limited.length <= 4) return `${limited.slice(0, 2)} ${limited.slice(2)}`
+    if (limited.length <= 6) return `${limited.slice(0, 2)} ${limited.slice(2, 4)} ${limited.slice(4)}`
+    return `${limited.slice(0, 2)} ${limited.slice(2, 4)} ${limited.slice(4, 6)} ${limited.slice(6)}`
+  }
+
+  const handlePhoneInputChange = (value: string) => {
+    // Mise à jour de l'affichage
+    const formattedDisplay = formatPhoneDisplay(value)
+    setPhoneInput(formattedDisplay)
+    
+    // Extraire les chiffres uniquement
+    const digits = value.replace(/\D/g, '').slice(0, 8)
+    
+    // Stocker dans formData avec le préfixe +229
+    if (digits.length === 8) {
+      const fullNumber = `+229${digits}`
+      handleChange('telephone', fullNumber)
+    } else {
+      // Si le numéro n'est pas complet, on stocke quand même
+      handleChange('telephone', digits ? `+229${digits}` : '')
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -74,43 +123,43 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
     setIsLoading(true)
     
     try {
-      // Sauvegarde temporaire dans localStorage (pour développement)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('onboardingData', JSON.stringify(formData))
+      // Validation finale du numéro
+      const phoneDigits = phoneInput.replace(/\D/g, '')
+      if (phoneDigits.length !== 8) {
+        throw new Error('Numéro de téléphone incomplet')
       }
       
-      console.log('✅ Données prêtes:', formData)
+      // S'assurer que le format est correct
+      const finalPhone = `+229${phoneDigits}`
+      const finalData = {
+        ...formData,
+        telephone: finalPhone
+      }
+      
+      // Sauvegarde dans localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('onboardingData', JSON.stringify(finalData))
+      }
+      
+      console.log('✅ Données finales:', finalData)
+      
+      // Mettre à jour les données parentes avec le format final
+      onUpdate(finalData)
       onNext()
       
     } catch (error) {
       console.error('❌ Erreur:', error)
-      alert('Erreur de sauvegarde')
+      setErrors({
+        telephone: 'Veuillez vérifier votre numéro de téléphone'
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
-  const formatPhoneNumber = (value: string) => {
-    // Nettoie le numéro
-    let cleaned = value.replace(/\D/g, '')
-    
-    // Si commence par 229 (indicatif Bénin)
-    if (cleaned.startsWith('229')) {
-      cleaned = '+' + cleaned
-    } else if (cleaned.length === 8) {
-      // Numéro local béninois (8 chiffres)
-      cleaned = '+229 ' + cleaned.match(/.{1,2}/g)?.join(' ') || cleaned
-    }
-    
-    return cleaned
-  }
-
-  const handlePhoneChange = (value: string) => {
-    const formatted = formatPhoneNumber(value)
-    handleChange('telephone', formatted)
-  }
-
-  const canContinue = formData.telephone && formData.email && formData.nom
+  const canContinue = phoneInput.replace(/\D/g, '').length === 8 && 
+                     formData.email && 
+                     formData.nom.trim().length >= 2
 
   return (
     <div className="max-w-md mx-auto px-4 sm:px-6 w-full">
@@ -160,27 +209,22 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
             </div>
           </label>
           <div className="relative">
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-700">
-              🇧🇯 +229
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-700 flex items-center gap-2">
+              <span className="text-lg">🇧🇯</span>
+              <span className="font-medium">+229</span>
             </div>
             <input
               type="tel"
-              value={formData.telephone}
-              onChange={(e) => handlePhoneChange(e.target.value)}
+              value={phoneInput}
+              onChange={(e) => handlePhoneInputChange(e.target.value)}
               className={`w-full pl-20 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent outline-none ${
                 errors.telephone ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="60 00 00 00"
               disabled={isLoading}
+              maxLength={11}
             />
           </div>
-          {errors.telephone ? (
-            <p className="mt-1 text-sm text-red-600">{errors.telephone}</p>
-          ) : (
-            <p className="mt-1 text-sm text-gray-500">
-              Format: +229 XX XX XX XX
-            </p>
-          )}
         </div>
 
         {/* Email */}

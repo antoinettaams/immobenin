@@ -16,6 +16,7 @@ import {
   XCircle,
   Loader2
 } from "lucide-react";
+import { FaTiktok } from 'react-icons/fa';
 
 export const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -77,7 +78,7 @@ export const Contact: React.FC = () => {
         from_email: formData.email,
         subject: formData.subject || "Demande de contact",
         message: formData.message,
-        to_email: "antoinettaams@gmail.com",
+        to_email: "immobenin08@gmail.com",
         phone: "Non fourni",
         date: new Date().toLocaleDateString('fr-FR', { 
           weekday: 'long', 
@@ -206,13 +207,13 @@ export const Contact: React.FC = () => {
                 <Info
                   icon={Phone}
                   title="Téléphone"
-                  value="+229 60 00 00 00"
+                  value="+229 01 43 75 79 82"
                   subtitle="Lun - Ven: 8h - 18h"
                 />
                 <Info
                   icon={Mail}
                   title="Email"
-                  value="immobenin@gmail.com"
+                  value="immobenin08@gmail.com"
                   subtitle="Réponse sous 24h"
                 />
                 <Info
@@ -231,17 +232,17 @@ export const Contact: React.FC = () => {
                 <div className="flex gap-4">
                   <Social 
                     icon={Facebook} 
-                    href="https://facebook.com/immobenin"
+                    href="https://www.facebook.com/profile.php?id=61587104714306"
                     label="Facebook"
                   />
                   <Social 
                     icon={Instagram} 
-                    href="https://instagram.com/immobenin"
+                    href="https://www.instagram.com/immobenin08/"
                     label="Instagram"
                   />
                   <Social 
-                    icon={Music} 
-                    href="https://tiktok.com/@immobenin"
+                    icon={FaTiktok} 
+                    href="https://www.tiktok.com/@immobnin?is_from_webapp=1&sender_device=pc"
                     label="TikTok"
                   />
                 </div>
@@ -257,7 +258,7 @@ export const Contact: React.FC = () => {
                   </div>
                 </div>
                 <a
-                  href="https://wa.me/22953998359"
+                  href="https://wa.me/22943757982"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2 bg-brand text-white px-6 py-4 rounded-xl font-semibold hover:bg-brand-dark transition-colors w-full"

@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
-import { Facebook, Instagram, Music, Mail, Phone, MapPin } from 'lucide-react';
+import { Facebook, Instagram, Mail, Phone, MapPin } from 'lucide-react';
+import { FaTiktok } from 'react-icons/fa';
 import { Button } from './Button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,8 +18,8 @@ export const Footer: React.FC = () => {
   // Fonction pour naviguer vers une page et scroller en haut
   const navigateWithScroll = (path: string) => {
     router.push(path);
-    // Attendre un peu pour que la navigation se fasse, puis scroller en haut
-    setTimeout(scrollToTop, 100);
+    // Scroller en haut après un court délai
+    setTimeout(scrollToTop, 50);
   };
 
   return (
@@ -45,13 +46,14 @@ export const Footer: React.FC = () => {
                 Trouver un espace
               </Button>
               
-              <button 
+              <Button 
+                variant="primary"
+                size="md"
                 onClick={() => navigateWithScroll('/publish')}
-                className="bg-white text-brand px-4 md:px-6 py-3 rounded-full font-bold hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-900 w-full sm:w-auto"
-                type="button"
+                className="w-full sm:w-auto justify-center"
               >
                 Devenir hôte
-              </button>
+              </Button>
             </div>
           </div>
           <div 
@@ -71,15 +73,23 @@ export const Footer: React.FC = () => {
           
           {/* Logo et description */}
           <div className="sm:text-left">
-            <h3 className="text-2xl font-bold mb-4 md:mb-6">
-              ImmoBenin
-            </h3>
+            <div 
+              onClick={() => navigateWithScroll('/')}
+              className="cursor-pointer inline-block"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && navigateWithScroll('/')}
+            >
+              <h3 className="text-2xl font-bold mb-4 md:mb-6 hover:text-brand transition-colors">
+                ImmoBenin
+              </h3>
+            </div>
             <p className="text-gray-400 text-sm md:text-base mb-4 md:mb-6">
               La plateforme de référence pour la location d&apos;espaces au Bénin. Simple, sécurisé, local.
             </p>
             <div className="flex  sm:justify-start gap-3 md:gap-4">
               <a 
-                href="https://facebook.com/immobenin" 
+                href="https://www.facebook.com/profile.php?id=61587104714306" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-lg"
@@ -88,7 +98,7 @@ export const Footer: React.FC = () => {
                 <Facebook className="w-5 h-5" />
               </a>
               <a 
-                href="https://instagram.com/immobenin" 
+                href="https://www.instagram.com/immobenin08/" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-lg"
@@ -97,28 +107,25 @@ export const Footer: React.FC = () => {
                 <Instagram className="w-5 h-5" />
               </a>
               <a 
-                href="https://tiktok.com/@immobenin" 
+                href="https://www.tiktok.com/@immobnin?is_from_webapp=1&sender_device=pc" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-lg"
                 aria-label="TikTok"
               >
-                <Music className="w-5 h-5" />
+                <FaTiktok className="w-5 h-5" />
               </a>
             </div>
           </div>
 
-          {/* Liens rapides */}
+          {/* Liens rapides - VERSION CORRIGÉE */}
           <div className="sm:text-left">
             <h4 className="font-bold text-lg mb-4 md:mb-6">Liens rapides</h4>
             <ul className="space-y-2 md:space-y-4 text-gray-400">
               <li>
                 <Link 
                   href="/" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateWithScroll('/');
-                  }}
+                  onClick={scrollToTop}
                   className="hover:text-white transition-colors inline-block text-sm md:text-base"
                   aria-label="Accueil"
                 >
@@ -128,10 +135,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link 
                   href="/search" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateWithScroll('/search');
-                  }}
+                  onClick={scrollToTop}
                   className="hover:text-white transition-colors inline-block text-sm md:text-base"
                   aria-label="Rechercher un bien"
                 >
@@ -141,10 +145,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link 
                   href="/publish" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateWithScroll('/publish');
-                  }}
+                  onClick={scrollToTop}
                   className="hover:text-white transition-colors inline-block text-sm md:text-base"
                   aria-label="Devenir hôte"
                 >
@@ -154,10 +155,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link 
                   href="/contact" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateWithScroll('/contact');
-                  }}
+                  onClick={scrollToTop}
                   className="hover:text-white transition-colors inline-block text-sm md:text-base"
                   aria-label="Contact"
                 >
@@ -167,17 +165,14 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Support */}
+          {/* Support - VERSION CORRIGÉE */}
           <div className="sm:text-left">
             <h4 className="font-bold text-lg mb-4 md:mb-6">Support</h4>
             <ul className="space-y-2 md:space-y-4 text-gray-400">
               <li>
                 <Link 
                   href="/contact" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateWithScroll('/contact');
-                  }}
+                  onClick={scrollToTop}
                   className="hover:text-white transition-colors inline-block text-sm md:text-base"
                   aria-label="Centre d'aide"
                 >
@@ -187,10 +182,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link 
                   href="/faq" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateWithScroll('/faq');
-                  }}
+                  onClick={scrollToTop}
                   className="hover:text-white transition-colors inline-block text-sm md:text-base"
                   aria-label="Questions fréquentes"
                 >
@@ -200,10 +192,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link 
                   href="/contact" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigateWithScroll('/contact');
-                  }}
+                  onClick={scrollToTop}
                   className="hover:text-white transition-colors inline-block text-sm md:text-base"
                   aria-label="Signaler un problème"
                 >
@@ -222,28 +211,25 @@ export const Footer: React.FC = () => {
                 <a 
                   href="mailto:immobenin@gmail.com" 
                   className="hover:text-white transition-colors text-sm md:text-base break-all"
-                  aria-label="Envoyer un email à immobenin@gmail.com"
-                  onClick={scrollToTop}
+                  aria-label="Envoyer un email à immobenin08@gmail.com"
                 >
-                  immobenin@gmail.com
+                  immobenin08@gmail.com
                 </a>
               </li>
               <li className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
                 <Phone className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
                 <a 
-                  href="tel:+22901000000" 
+                  href="tel:+2290143757982" 
                   className="hover:text-white transition-colors text-sm md:text-base"
-                  aria-label="Appeler le +229 01 00 00 00"
-                  onClick={scrollToTop}
+                  aria-label="Appeler le +229 01 43 75 79 82"
                 >
-                  +229 01 00 00 00
+                  +229 01 43 75 79 82
                 </a>
               </li>
               <li className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
                 <MapPin className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
                 <span 
-                  onClick={scrollToTop} 
-                  className="cursor-pointer hover:text-white transition-colors text-sm md:text-base"
+                  className="text-sm md:text-base"
                 >
                   Cotonou, Fidjrossè
                 </span>

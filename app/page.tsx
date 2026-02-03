@@ -5,11 +5,11 @@ import { HowItWorks } from '@/components/HowItWorks';
 import { OwnerCTA } from '@/components/CTAHost';
 import { Testimonials } from '@/components/Testimonials';
 import { BeninFocus } from '@/components/BeninFocus';
-import { StickyNav } from '@/components/Navbar';
-
+import { Header } from '@/components/Header';
 export default function HomePage() {
   return (
-    <main>
+    <main className="min-h-screen">
+      <Header /> {/* Changé de StickyNav à Header */}
       <Hero />
       <CategoriesSection />
       <ValuePropSection />
@@ -17,7 +17,6 @@ export default function HomePage() {
       <OwnerCTA />
       <Testimonials />
       <BeninFocus />
-      <StickyNav />
     </main>
   );
 }
