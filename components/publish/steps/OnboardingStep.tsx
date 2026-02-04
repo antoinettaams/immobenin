@@ -50,7 +50,6 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
     onUpdate(updated)
   }
 
-  // FORCE l'utilisation d'un input type="text" avec gestion manuelle
   const handlePhoneInputChange = (rawValue: string) => {
     // Supprimer TOUT sauf les chiffres
     let cleanValue = rawValue.replace(/\D/g, '')
@@ -58,7 +57,7 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
     // Limiter à 8 chiffres maximum
     cleanValue = cleanValue.slice(0, 8)
     
-    // Mettre à jour l'affichage (sans formatage pour éviter les problèmes)
+    // Mettre à jour l'affichage
     setPhoneInput(cleanValue)
     
     // Mettre à jour formData
@@ -167,7 +166,7 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
           )}
         </div>
 
-        {/* CHAMP TÉLÉPHONE CORRIGÉ - Solution radicale */}
+        {/* CHAMP TÉLÉPHONE CORRIGÉ */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <div className="flex items-center gap-2">
@@ -181,16 +180,20 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
               <span className="font-medium">+229</span>
             </div>
             
-            {/* SOLUTION : Input type="text" avec pattern personnalisé */}
+            {/* SOLUTION: Retirer font-mono et ajouter un meilleur contrôle */}
             <input
               ref={phoneInputRef}
-              type="text" // CHANGÉ de "tel" à "text"
-              inputMode="tel" // Garde le clavier téléphone
+              type="text"
+              inputMode="tel"
               value={phoneInput}
               onChange={(e) => {
-                // Filtrer les caractères non numériques
-                const value = e.target.value.replace(/\D/g, '')
-                setPhoneInput(value.slice(0, 8))
+                // Formatage visuel pour mobile: espace tous les 2 chiffres
+                let value = e.target.value.replace(/\D/g, '')
+                
+                // Limiter à 8 chiffres
+                value = value.slice(0, 8)
+                
+                setPhoneInput(value)
                 
                 // Mettre à jour formData
                 if (value.length === 8) {
@@ -198,27 +201,46 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
                 }
               }}
               onBlur={(e) => {
-                // Validation à la perte de focus
                 const value = e.target.value.replace(/\D/g, '')
                 if (value.length === 8) {
                   handleChange('telephone', `+229${value}`)
                 }
               }}
-              className={`gap-4 w-full pl-20 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent outline-none text-lg font-mono ${
+              className={`w-full pl-20 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent outline-none text-lg tracking-wider ${
                 errors.telephone ? 'border-red-300' : 'border-gray-300'
               }`}
-              placeholder="60000000"
+              placeholder="60 00 00 00"
               disabled={isLoading}
-              maxLength={8} // Limite à 8 chiffres
-              pattern="[0-9]{8}" // Pattern HTML5
+              maxLength={10} // Un peu plus large pour l'espacement visuel
+              pattern="[0-9]{8}"
               title="8 chiffres béninois (commençant par 6, 7 ou 9)"
             />
             
             {/* Indicateur de longueur */}
             <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400">
-              {phoneInput.length}/8
+              {phoneInput.replace(/\D/g, '').length}/8
             </div>
           </div>
+          
+          {/* Afficher le numéro formaté pour le mobile */}
+          <div className="mt-2">
+            {phoneInput.length > 0 && (
+              <div className="text-sm text-gray-600">
+                <span className="font-medium">Numéro complet :</span>{' '}
+                <span className="font-bold">
+                  +229 {phoneInput.replace(/(\d{2})(?=\d)/g, '$1 ')}
+                </span>
+              </div>
+            )}
+          </div>
+          
+          {errors.telephone ? (
+            <p className="mt-1 text-sm text-red-600">{errors.telephone}</p>
+          ) : (
+            <p className="mt-1 text-xs text-gray-500">
+              Format : 8 chiffres (commence par 6, 7 ou 9)
+            </p>
+          )}
         </div>
 
         {/* Email */}
