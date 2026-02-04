@@ -130,10 +130,11 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
   const [publishError, setPublishError] = useState<string | null>(null)
   const [hasDraftRestored, setHasDraftRestored] = useState(false)
   
-  // Références pour éviter les doublons
+  // Références persistantes avec useRef
   const draftToastShownRef = useRef(false)
   const saveToastShownRef = useRef(false)
-  const errorToastShownRef = useRef<string>('') // Pour suivre quel toast d'erreur est affiché
+  const errorToastShownRef = useRef<string>('')
+  const currentToastIdRef = useRef<string>('')
 
   // LOG INITIAL
   console.log('🚀 PUBLISHFLOW INITIALISÉ')
@@ -274,146 +275,162 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
     }
   }, [])
 
-  // Afficher le toast de brouillon restauré - UNE SEULE FOIS au chargement initial
- // Afficher le toast de brouillon restauré - UNE SEULE FOIS au chargement initial
-useEffect(() => {
-  if (isClient && hasDraftRestored && !draftToastShownRef.current) {
-    console.log('🎯 Afficher toast de brouillon restauré (une seule fois)')
-    
-    // Marquer comme montré
-    draftToastShownRef.current = true
-    
-    const showDraftToast = () => {
-      const toastId = toast.custom((t) => (
-        <div 
-          data-draft-restored="true"
-          className={`${t.visible ? 'animate-enter' : 'animate-leave'} 
-            max-w-md w-full bg-blue-50 shadow-lg rounded-lg pointer-events-auto 
-            flex flex-col ring-1 ring-blue-200 border-l-4 border-blue-500`}
-        >
-          <div className="flex-1 p-4">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-                  </svg>
+  // Afficher le toast de brouillon restauré - UNE SEULE FOIS
+  useEffect(() => {
+    if (isClient && hasDraftRestored && !draftToastShownRef.current) {
+      console.log('🎯 Afficher toast de brouillon restauré')
+      
+      // Fonction pour afficher le toast
+      const showDraftToast = () => {
+        // Vérifier si un toast est déjà affiché
+        const existingToast = document.querySelector('[data-draft-restored="true"]')
+        if (existingToast) {
+          console.log('⚠️ Toast draft déjà affiché, on ignore')
+          return
+        }
+        
+        draftToastShownRef.current = true
+        
+        const toastId = toast.custom((t) => {
+          // Stocker l'ID du toast
+          currentToastIdRef.current = toastId
+          
+          return (
+            <div 
+              data-draft-restored="true"
+              className={`${t.visible ? 'animate-enter' : 'animate-leave'} 
+                max-w-md w-full bg-blue-50 shadow-lg rounded-lg pointer-events-auto 
+                flex flex-col ring-1 ring-blue-200 border-l-4 border-blue-500`}
+            >
+              <div className="flex-1 p-4">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <p className="text-sm font-medium text-blue-900">Brouillon restauré</p>
+                    <p className="mt-1 text-sm text-blue-700">
+                      Vous avez un brouillon enregistré. Continuez là où vous vous êtes arrêté.
+                    </p>
+                    <div className="mt-2 flex items-center text-sm text-blue-600">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100">
+                        Étape {currentStep + 1}/10
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-blue-900">Brouillon restauré</p>
-                <p className="mt-1 text-sm text-blue-700">
-                  Vous avez un brouillon enregistré. Continuez là où vous vous êtes arrêté.
-                </p>
-                <div className="mt-2 flex items-center text-sm text-blue-600">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100">
-                    Étape {currentStep + 1}/10
-                  </span>
-                </div>
+              <div className="flex border-t border-blue-200 divide-x divide-blue-200">
+                <button
+                  onClick={() => {
+                    toast.dismiss(toastId)
+                  }}
+                  className="flex-1 border border-transparent rounded-bl-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  Rester
+                </button>
+                <button
+                  onClick={() => {
+                    toast.dismiss(toastId)
+                    // Effacer le brouillon si l'utilisateur préfère recommencer
+                    localStorage.removeItem('draft_listing')
+                    localStorage.removeItem('draft_current_step')
+                    localStorage.removeItem('draft_saved_at')
+                    // Réinitialiser les données pour recommencer
+                    setListingData({
+                      owner: {
+                        telephone: '',
+                        email: '',
+                        nom: '',
+                      },
+                      propertyType: { category: 'house', subType: '', privacy: 'entire' },
+                      location: { country: 'Bénin', city: '', neighborhood: '', address: '' },
+                      basics: {
+                        maxGuests: 0,
+                        bedrooms: 0,
+                        beds: 0,
+                        bathrooms: 0,
+                        size: 0,
+                        floors: 0,
+                        privateEntrance: false,
+                        employees: 0,
+                        offices: 0,
+                        meetingRooms: 0,
+                        workstations: 0,
+                        hasReception: false,
+                        eventCapacity: 0,
+                        kitchenAvailable: false,
+                        parkingSpots: 0,
+                        wheelchairAccessible: false,
+                        hasStage: false,
+                        hasSoundSystem: false,
+                        hasProjector: false,
+                        hasCatering: false,
+                        minBookingHours: 0,
+                      },
+                      amenities: [],
+                      photos: [],
+                      title: '',
+                      description: { summary: '', spaceDescription: '', guestAccess: '', neighborhood: '' },
+                      pricing: {
+                        basePrice: 0,
+                        currency: 'FCFA',
+                        weeklyDiscount: 10,
+                        monthlyDiscount: 20,
+                        cleaningFee: 0,
+                        extraGuestFee: 0,
+                        securityDeposit: 0,
+                      },
+                      rules: {
+                        checkInTime: '15:00',
+                        checkOutTime: '11:00',
+                        smokingAllowed: false,
+                        petsAllowed: false,
+                        partiesAllowed: false,
+                        childrenAllowed: true,
+                      }
+                    })
+                    setCurrentStep(0)
+                    setHasDraftRestored(false)
+                    draftToastShownRef.current = false // Réinitialiser pour éviter les problèmes futurs
+                    
+                    toast.success(
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Brouillon effacé. Commencez une nouvelle annonce.</span>
+                      </div>,
+                      { duration: 3000 }
+                    )
+                  }}
+                  className="flex-1 border border-transparent rounded-br-lg p-4 flex items-center justify-center text-sm font-medium text-red-600 hover:text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  Effacer
+                </button>
               </div>
             </div>
-          </div>
-          <div className="flex border-t border-blue-200 divide-x divide-blue-200">
-            <button
-              onClick={() => {
-                toast.dismiss(toastId)
-                // Ne pas réinitialiser draftToastShownRef.current ici
-                // La modale ne doit plus réapparaître après fermeture
-              }}
-              className="flex-1 border border-transparent rounded-bl-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Rester
-            </button>
-            <button
-              onClick={() => {
-                toast.dismiss(toastId)
-                // Effacer le brouillon si l'utilisateur préfère recommencer
-                localStorage.removeItem('draft_listing')
-                localStorage.removeItem('draft_current_step')
-                localStorage.removeItem('draft_saved_at')
-                // Réinitialiser les données pour recommencer
-                setListingData({
-                  owner: {
-                    telephone: '',
-                    email: '',
-                    nom: '',
-                  },
-                  propertyType: { category: 'house', subType: '', privacy: 'entire' },
-                  location: { country: 'Bénin', city: '', neighborhood: '', address: '' },
-                  basics: {
-                    maxGuests: 0,
-                    bedrooms: 0,
-                    beds: 0,
-                    bathrooms: 0,
-                    size: 0,
-                    floors: 0,
-                    privateEntrance: false,
-                    employees: 0,
-                    offices: 0,
-                    meetingRooms: 0,
-                    workstations: 0,
-                    hasReception: false,
-                    eventCapacity: 0,
-                    kitchenAvailable: false,
-                    parkingSpots: 0,
-                    wheelchairAccessible: false,
-                    hasStage: false,
-                    hasSoundSystem: false,
-                    hasProjector: false,
-                    hasCatering: false,
-                    minBookingHours: 0,
-                  },
-                  amenities: [],
-                  photos: [],
-                  title: '',
-                  description: { summary: '', spaceDescription: '', guestAccess: '', neighborhood: '' },
-                  pricing: {
-                    basePrice: 0,
-                    currency: 'FCFA',
-                    weeklyDiscount: 10,
-                    monthlyDiscount: 20,
-                    cleaningFee: 0,
-                    extraGuestFee: 0,
-                    securityDeposit: 0,
-                  },
-                  rules: {
-                    checkInTime: '15:00',
-                    checkOutTime: '11:00',
-                    smokingAllowed: false,
-                    petsAllowed: false,
-                    partiesAllowed: false,
-                    childrenAllowed: true,
-                  }
-                })
-                setCurrentStep(0)
-                setHasDraftRestored(false)
-                
-                toast.success(
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Brouillon effacé. Commencez une nouvelle annonce.</span>
-                  </div>,
-                  { duration: 3000 }
-                )
-              }}
-              className="flex-1 border border-transparent rounded-br-lg p-4 flex items-center justify-center text-sm font-medium text-red-600 hover:text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              Effacer
-            </button>
-          </div>
-        </div>
-      ), {
-        duration: 8000,
-        position: 'top-center',
-      })
+          )
+        }, {
+          duration: 8000,
+          position: 'top-center',
+          onDismiss: () => {
+            // Nettoyer quand le toast est fermé
+            draftToastShownRef.current = false
+            currentToastIdRef.current = ''
+          }
+        })
+      }
+      
+      // Petit délai pour s'assurer que tout est chargé
+      setTimeout(showDraftToast, 500)
     }
-    
-    // Petit délai pour s'assurer que tout est chargé
-    setTimeout(showDraftToast, 500)
-  }
-}, [isClient, hasDraftRestored]) // RETIRER currentStep des dépendances
+  }, [isClient, hasDraftRestored])
+
   // Validation de chaque étape
   const validateCurrentStep = useCallback((): boolean => {
     console.log(`🔍 VALIDATION étape ${currentStep}`)
@@ -651,6 +668,14 @@ useEffect(() => {
           return
         }
         
+        // Vérifier aussi dans le DOM
+        const existingErrorToast = document.querySelector(`[data-error-step="${currentStep}"]`)
+        if (existingErrorToast) {
+          console.log('⚠️ Toast d\'erreur déjà dans le DOM, on ignore')
+          errorToastShownRef.current = errorKey
+          return
+        }
+        
         // Marquer ce toast comme affiché
         errorToastShownRef.current = errorKey
         
@@ -668,31 +693,36 @@ useEffect(() => {
         }
         
         const toastId = toast.error(
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="font-semibold">Champs requis manquants</span>
+          (t) => (
+            <div 
+              data-error-step={currentStep}
+              className={`${t.visible ? 'animate-enter' : 'animate-leave'} flex flex-col gap-1`}
+            >
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-semibold">Champs requis manquants</span>
+              </div>
+              <p className="text-sm">
+                {errorMessages[currentStep as keyof typeof errorMessages]}
+              </p>
             </div>
-            <p className="text-sm">
-              {errorMessages[currentStep as keyof typeof errorMessages]}
-            </p>
-          </div>,
+          ),
           {
             duration: 4000,
             style: {
               background: '#FEF2F2',
               color: '#DC2626',
               border: '1px solid #FECACA',
+            },
+            id: errorKey, // Utiliser l'errorKey comme ID unique
+            onDismiss: () => {
+              // Quand le toast est fermé, réinitialiser le ref
+              errorToastShownRef.current = ''
             }
           }
         )
-
-        // Surveiller quand le toast disparaît
-        setTimeout(() => {
-          errorToastShownRef.current = ''
-        }, 4500) // Un peu plus long que la durée du toast
       }
       return
     }
@@ -722,100 +752,112 @@ useEffect(() => {
     }
   }
 
-  // Fonction pour sauvegarder et quitter - EMPÊCHER LES DOUBLONS
+  // Fonction pour sauvegarder et quitter
   const handleSaveAndExit = () => {
     console.log('💾 SAVE AND EXIT appelé')
     
-    // Empêcher les doublons avec ref
+    // Vérifier si un toast save est déjà affiché
+    const existingSaveToast = document.querySelector('[data-save-exit="true"]')
+    if (existingSaveToast) {
+      console.log('⚠️ Toast save déjà affiché, on ignore')
+      return
+    }
+    
     if (saveToastShownRef.current) {
-      console.log('⚠️ Toast déjà affiché, on ignore')
+      console.log('⚠️ Toast déjà en mémoire, on ignore')
       return
     }
     
     saveToastShownRef.current = true
     
-    const toastId = toast.custom((t) => (
-      <div 
-        data-save-exit="true"
-        className={`${t.visible ? 'animate-enter' : 'animate-leave'} 
-          max-w-md w-full bg-green-50 shadow-lg rounded-lg pointer-events-auto 
-          flex flex-col ring-1 ring-green-200 border-l-4 border-green-500`}
-      >
-        <div className="flex-1 p-4">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+    const toastId = toast.custom((t) => {
+      currentToastIdRef.current = toastId
+      
+      return (
+        <div 
+          data-save-exit="true"
+          className={`${t.visible ? 'animate-enter' : 'animate-leave'} 
+            max-w-md w-full bg-green-50 shadow-lg rounded-lg pointer-events-auto 
+            flex flex-col ring-1 ring-green-200 border-l-4 border-green-500`}
+        >
+          <div className="flex-1 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
               </div>
-            </div>
-            <div className="ml-3 flex-1">
-              <p className="text-sm font-medium text-green-900">Brouillon sauvegardé</p>
-              <p className="mt-1 text-sm text-green-700">
-                Votre annonce a été sauvegardée. Vous pourrez la reprendre plus tard.
-              </p>
-              <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100">
-                  Étape {currentStep + 1}/10 sauvegardée
-                </span>
-                <span className="text-xs opacity-75">
-                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-green-900">Brouillon sauvegardé</p>
+                <p className="mt-1 text-sm text-green-700">
+                  Votre annonce a été sauvegardée. Vous pourrez la reprendre plus tard.
+                </p>
+                <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100">
+                    Étape {currentStep + 1}/10 sauvegardée
+                  </span>
+                  <span className="text-xs opacity-75">
+                    {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
+          <div className="flex border-t border-green-200 divide-x divide-green-200">
+            <button
+              onClick={() => {
+                toast.dismiss(toastId)
+                saveToastShownRef.current = false
+                currentToastIdRef.current = ''
+              }}
+              className="flex-1 border border-transparent rounded-bl-lg p-4 flex items-center justify-center text-sm font-medium text-green-600 hover:text-green-500 hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              Rester
+            </button>
+            <button
+              onClick={() => {
+                toast.dismiss(toastId)
+                saveToastShownRef.current = false
+                currentToastIdRef.current = ''
+                
+                // Sauvegarder dans localStorage
+                localStorage.setItem('draft_listing', JSON.stringify(listingData))
+                localStorage.setItem('draft_current_step', currentStep.toString())
+                localStorage.setItem('draft_saved_at', new Date().toISOString())
+                
+                // Afficher un message de confirmation supplémentaire
+                toast.success(
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Redirection vers l'accueil...</span>
+                  </div>,
+                  { duration: 2000 }
+                )
+                
+                // Redirection différée
+                setTimeout(() => {
+                  window.location.href = '/'
+                }, 1500)
+              }}
+              className="flex-1 border border-transparent rounded-br-lg p-4 flex items-center justify-center text-sm font-medium text-green-700 hover:text-green-600 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              OK
+            </button>
+          </div>
         </div>
-        <div className="flex border-t border-green-200 divide-x divide-green-200">
-          <button
-            onClick={() => {
-              toast.dismiss(toastId)
-              saveToastShownRef.current = false
-            }}
-            className="flex-1 border border-transparent rounded-bl-lg p-4 flex items-center justify-center text-sm font-medium text-green-600 hover:text-green-500 hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            Rester
-          </button>
-          <button
-            onClick={() => {
-              toast.dismiss(toastId)
-              
-              // Sauvegarder dans localStorage
-              localStorage.setItem('draft_listing', JSON.stringify(listingData))
-              localStorage.setItem('draft_current_step', currentStep.toString())
-              localStorage.setItem('draft_saved_at', new Date().toISOString())
-              
-              // Afficher un message de confirmation supplémentaire
-              toast.success(
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>Redirection vers l'accueil...</span>
-                </div>,
-                { duration: 2000 }
-              )
-              
-              // Redirection différée
-              setTimeout(() => {
-                window.location.href = '/'
-              }, 1500)
-            }}
-            className="flex-1 border border-transparent rounded-br-lg p-4 flex items-center justify-center text-sm font-medium text-green-700 hover:text-green-600 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            OK
-          </button>
-        </div>
-      </div>
-    ), {
+      )
+    }, {
       duration: 10000,
       position: 'top-center',
+      onDismiss: () => {
+        saveToastShownRef.current = false
+        currentToastIdRef.current = ''
+      }
     })
-
-    // Surveiller quand le toast disparaît
-    setTimeout(() => {
-      saveToastShownRef.current = false
-    }, 10500) // Un peu plus long que la durée du toast
   }
 
   // Fonction pour publier
@@ -1122,29 +1164,24 @@ useEffect(() => {
                 aria-label="Accueil - Retour à la page d'accueil"
               >
                 <div className="text-brand group-hover:scale-110 transition-transform duration-300">
-             <svg 
-  width="32" 
-  height="32" 
-  viewBox="0 0 100 100" 
-  fill="none" 
-  xmlns="http://www.w3.org/2000/svg"
-  aria-hidden="true"
->
-  {/* Forme principale (Maison / Pin) */}
-  <path 
-    d="M50 5L15 40V70C15 75 20 80 50 95C80 80 85 75 85 70V40L50 5Z" 
-    fill="#FF385C" 
-  />
-  
-  {/* Cercle central */}
-  <circle cx="50" cy="55" r="12" fill="white" />
-  
-  {/* Fenêtre dans le toit */}
-  <rect x="44" y="24" width="12" height="10" fill="white" />
-  <line x1="50" y1="24" x2="50" y2="34" stroke="#FF385C" strokeWidth="1.5" />
-  <line x1="44" y1="29" x2="56" y2="29" stroke="#FF385C" strokeWidth="1.5" />
-</svg>
-          </div>
+                  <svg 
+                    width="32" 
+                    height="32" 
+                    viewBox="0 0 100 100" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                  >
+                    <path 
+                      d="M50 5L15 40V70C15 75 20 80 50 95C80 80 85 75 85 70V40L50 5Z" 
+                      fill="#FF385C" 
+                    />
+                    <circle cx="50" cy="55" r="12" fill="white" />
+                    <rect x="44" y="24" width="12" height="10" fill="white" />
+                    <line x1="50" y1="24" x2="50" y2="34" stroke="#FF385C" strokeWidth="1.5" />
+                    <line x1="44" y1="29" x2="56" y2="29" stroke="#FF385C" strokeWidth="1.5" />
+                  </svg>
+                </div>
                 <span className="text-xl font-extrabold tracking-tight text-gray-900 group-hover:text-brand transition-colors">
                   ImmoBenin
                 </span>
