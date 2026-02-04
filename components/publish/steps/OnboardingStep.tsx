@@ -219,14 +219,6 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
               {phoneInput.length}/8
             </div>
           </div>
-          
-          {errors.telephone ? (
-            <p className="mt-1 text-sm text-red-600">{errors.telephone}</p>
-          ) : (
-            <p className="mt-1 text-xs text-gray-500">
-              Format : 8 chiffres (ex: 60000000, 70000000, 90000000)
-            </p>
-          )}
         </div>
 
         {/* Email */}
