@@ -204,7 +204,7 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
                   handleChange('telephone', `+229${value}`)
                 }
               }}
-              className={`w-full pl-20 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent outline-none text-lg font-mono ${
+              className={`gap-4 w-full pl-20 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent outline-none text-lg font-mono ${
                 errors.telephone ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="60000000"
