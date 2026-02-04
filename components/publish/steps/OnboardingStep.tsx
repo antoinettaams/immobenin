@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Phone, Mail, User, Shield } from 'lucide-react'
 
 interface OnboardingData {
@@ -25,8 +25,8 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   const [phoneInput, setPhoneInput] = useState('')
   const phoneInputRef = useRef<HTMLInputElement>(null)
 
-  // Initialisation depuis les props
-  React.useEffect(() => {
+  // Initialisation
+  useEffect(() => {
     if (data.telephone) {
       const digitsOnly = data.telephone.replace(/\D/g, '')
       if (digitsOnly.startsWith('229')) {
@@ -48,6 +48,57 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
     }
     
     onUpdate(updated)
+  }
+
+  // FORCE l'utilisation d'un input type="text" avec gestion manuelle
+  const handlePhoneInputChange = (rawValue: string) => {
+    // Supprimer TOUT sauf les chiffres
+    let cleanValue = rawValue.replace(/\D/g, '')
+    
+    // Limiter à 8 chiffres maximum
+    cleanValue = cleanValue.slice(0, 8)
+    
+    // Mettre à jour l'affichage (sans formatage pour éviter les problèmes)
+    setPhoneInput(cleanValue)
+    
+    // Mettre à jour formData
+    if (cleanValue.length === 8) {
+      const fullNumber = `+229${cleanValue}`
+      handleChange('telephone', fullNumber)
+    } else {
+      handleChange('telephone', cleanValue ? `+229${cleanValue}` : '')
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!validateForm()) return
+    
+    setIsLoading(true)
+    
+    try {
+      const phoneDigits = phoneInput.replace(/\D/g, '')
+      if (phoneDigits.length !== 8) {
+        throw new Error('Numéro de téléphone incomplet')
+      }
+      
+      const finalPhone = `+229${phoneDigits}`
+      const finalData = {
+        ...formData,
+        telephone: finalPhone
+      }
+      
+      onUpdate(finalData)
+      onNext()
+      
+    } catch (error) {
+      setErrors({
+        telephone: 'Veuillez vérifier votre numéro de téléphone'
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const validateForm = (): boolean => {
@@ -77,103 +128,6 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
-
-  const formatPhoneDisplay = (value: string): string => {
-    const digits = value.replace(/\D/g, '')
-    const limited = digits.slice(0, 8)
-    
-    if (limited.length <= 2) return limited
-    if (limited.length <= 4) return `${limited.slice(0, 2)} ${limited.slice(2)}`
-    if (limited.length <= 6) return `${limited.slice(0, 2)} ${limited.slice(2, 4)} ${limited.slice(4)}`
-    return `${limited.slice(0, 2)} ${limited.slice(2, 4)} ${limited.slice(4, 6)} ${limited.slice(6)}`
-  }
-
-  const handlePhoneInputChange = (value: string) => {
-    // Empêcher les caractères non numériques
-    const digits = value.replace(/\D/g, '').slice(0, 8)
-    
-    // Format d'affichage avec espacement
-    const formattedDisplay = formatPhoneDisplay(digits)
-    setPhoneInput(formattedDisplay)
-    
-    // Stocker dans formData avec le préfixe +229 seulement si complet
-    if (digits.length === 8) {
-      const fullNumber = `+229${digits}`
-      handleChange('telephone', fullNumber)
-    } else {
-      handleChange('telephone', digits ? `+229${digits}` : '')
-    }
-  }
-
-  // CORRECTION : Gestion spéciale pour mobile
-  const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Si on mobile, prévenir le comportement par défaut des suggestions
-    if (e.key === 'Backspace') {
-      e.preventDefault()
-      const current = phoneInput.replace(/\D/g, '')
-      const newDigits = current.slice(0, -1)
-      handlePhoneInputChange(newDigits)
-    }
-  }
-
-  // CORRECTION : Gestion de l'input sur mobile
-  const handlePhoneInput = (e: React.FormEvent<HTMLInputElement>) => {
-    const value = e.currentTarget.value
-    
-    // Si le texte contient "+229", on l'enlève
-    const cleanValue = value.replace('+229', '').replace('+', '')
-    
-    // Nettoyer et formater
-    const digits = cleanValue.replace(/\D/g, '').slice(0, 8)
-    handlePhoneInputChange(digits)
-  }
-
-  // CORRECTION : Empêcher le collage automatique
-  const handlePhonePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault()
-    const pastedText = e.clipboardData.getData('text')
-    const digits = pastedText.replace(/\D/g, '').slice(0, 8)
-    handlePhoneInputChange(digits)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateForm()) return
-    
-    setIsLoading(true)
-    
-    try {
-      const phoneDigits = phoneInput.replace(/\D/g, '')
-      if (phoneDigits.length !== 8) {
-        throw new Error('Numéro de téléphone incomplet')
-      }
-      
-      const finalPhone = `+229${phoneDigits}`
-      const finalData = {
-        ...formData,
-        telephone: finalPhone
-      }
-      
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('onboardingData', JSON.stringify(finalData))
-      }
-      
-      onUpdate(finalData)
-      onNext()
-      
-    } catch (error) {
-      setErrors({
-        telephone: 'Veuillez vérifier votre numéro de téléphone'
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const canContinue = phoneInput.replace(/\D/g, '').length === 8 && 
-                     formData.email && 
-                     formData.nom.trim().length >= 2
 
   return (
     <div className="max-w-md mx-auto px-4 sm:px-6 w-full">
@@ -213,7 +167,7 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
           )}
         </div>
 
-        {/* Téléphone - CHAMP CORRIGÉ */}
+        {/* CHAMP TÉLÉPHONE CORRIGÉ - Solution radicale */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <div className="flex items-center gap-2">
@@ -226,30 +180,53 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
               <span className="text-lg">🇧🇯</span>
               <span className="font-medium">+229</span>
             </div>
+            
+            {/* SOLUTION : Input type="text" avec pattern personnalisé */}
             <input
               ref={phoneInputRef}
-              type="tel"
-              inputMode="numeric" // Important pour mobile
-              pattern="[0-9]*" // Important pour mobile
+              type="text" // CHANGÉ de "tel" à "text"
+              inputMode="tel" // Garde le clavier téléphone
               value={phoneInput}
-              onChange={handlePhoneInput} // CHANGÉ
-              onKeyDown={handlePhoneKeyDown} // AJOUTÉ
-              onPaste={handlePhonePaste} // AJOUTÉ
-              className={`w-full pl-20 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent outline-none ${
+              onChange={(e) => {
+                // Filtrer les caractères non numériques
+                const value = e.target.value.replace(/\D/g, '')
+                setPhoneInput(value.slice(0, 8))
+                
+                // Mettre à jour formData
+                if (value.length === 8) {
+                  handleChange('telephone', `+229${value}`)
+                }
+              }}
+              onBlur={(e) => {
+                // Validation à la perte de focus
+                const value = e.target.value.replace(/\D/g, '')
+                if (value.length === 8) {
+                  handleChange('telephone', `+229${value}`)
+                }
+              }}
+              className={`w-full pl-20 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent outline-none text-lg font-mono ${
                 errors.telephone ? 'border-red-300' : 'border-gray-300'
               }`}
-              placeholder="XX XX XX XX"
+              placeholder="60000000"
               disabled={isLoading}
-              autoComplete="tel-national" // Pour mobile
-              maxLength={11} // 8 chiffres + 3 espaces
+              maxLength={8} // Limite à 8 chiffres
+              pattern="[0-9]{8}" // Pattern HTML5
+              title="8 chiffres béninois (commençant par 6, 7 ou 9)"
             />
+            
+            {/* Indicateur de longueur */}
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400">
+              {phoneInput.length}/8
+            </div>
           </div>
-          {errors.telephone && (
+          
+          {errors.telephone ? (
             <p className="mt-1 text-sm text-red-600">{errors.telephone}</p>
+          ) : (
+            <p className="mt-1 text-xs text-gray-500">
+              Format : 8 chiffres (ex: 60000000, 70000000, 90000000)
+            </p>
           )}
-          <p className="mt-1 text-xs text-gray-500">
-            Format: 8 chiffres béninois (commence par 6, 7 ou 9)
-          </p>
         </div>
 
         {/* Email */}
@@ -287,6 +264,32 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
                 Votre numéro de téléphone et email ne seront partagés qu'avec les voyageurs.
               </p>
             </div>
+          </div>
+        </div>
+        
+        {/* Bouton continuer */}
+        <div className="pt-4">
+          <button
+            type="submit"
+            disabled={isLoading || phoneInput.length !== 8 || !formData.email || !formData.nom}
+            className="w-full bg-brand text-white py-3 rounded-lg font-semibold hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Validation...
+              </>
+            ) : (
+              'Continuer'
+            )}
+          </button>
+          
+          <div className="mt-2 text-xs text-gray-500 text-center">
+            {phoneInput.length === 8 && formData.email && formData.nom ? (
+              <span className="text-green-600">✓ Tous les champs sont valides</span>
+            ) : (
+              <span>Remplissez tous les champs pour continuer</span>
+            )}
           </div>
         </div>
       </form>
