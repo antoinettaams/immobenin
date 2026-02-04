@@ -465,33 +465,52 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
             </div>
 
             {/* Conditions */}
-            <div className="p-4 sm:p-6 border border-gray-200 rounded-xl sm:rounded-2xl">
-              <h4 className="font-bold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Conditions</h4>
-              
-              <div className="space-y-2 sm:space-y-3">
-                <label className="flex items-start gap-2 sm:gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 sm:mt-1 w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand flex-shrink-0"
-                    defaultChecked
-                  />
-                  <span className="text-xs sm:text-sm text-gray-700">
-                    J'accepte les conditions générales
-                  </span>
-                </label>
-                
-                <label className="flex items-start gap-2 sm:gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 sm:mt-1 w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand flex-shrink-0"
-                    defaultChecked
-                  />
-                  <span className="text-xs sm:text-sm text-gray-700">
-                    Je certifie que les informations sont exactes
-                  </span>
-                </label>
-              </div>
-            </div>
+            <div className="p-4 sm:p-6 border border-gray-200 rounded-xl sm:rounded-2xl bg-white">
+  <h4 className="font-bold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Conditions</h4>
+  
+  <div className="space-y-3 sm:space-y-4">
+    {/* Premier Label avec Liens */}
+    <label className="flex items-start gap-3 cursor-pointer group">
+      <input
+        type="checkbox"
+        className="mt-1 w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand flex-shrink-0 cursor-pointer"
+        required
+      />
+      <span className="text-xs sm:text-sm text-gray-700 leading-snug">
+        J'accepte les{" "}
+        <a 
+          href="/conditions" 
+          target="_blank" 
+          className="text-brand hover:underline font-semibold"
+          onClick={(e) => e.stopPropagation()}
+        >
+          conditions générales
+        </a>{" "}
+        et la{" "}
+        <a 
+          href="/confidentialite" 
+          target="_blank" 
+          className="text-brand hover:underline font-semibold"
+          onClick={(e) => e.stopPropagation()}
+        >
+          politique de confidentialité
+        </a>
+      </span>
+    </label>
+
+    {/* Deuxième Label : Certification */}
+    <label className="flex items-start gap-3 cursor-pointer">
+      <input
+        type="checkbox"
+        className="mt-1 w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand flex-shrink-0 cursor-pointer"
+        required
+      />
+      <span className="text-xs sm:text-sm text-gray-700 leading-snug">
+        Je certifie que les informations fournies sont exactes et sincères.
+      </span>
+    </label>
+  </div>
+</div>
           </div>
         </div>
       </div>

@@ -15,13 +15,16 @@ import {
   Utensils
 } from "lucide-react";
 
-interface BasicsData {
+// EXPORT du type BasicsData
+export type BasicsData = {
   // Pour maison
   maxGuests?: number;
   bedrooms?: number;
   beds?: number;
   bathrooms?: number;
   privateEntrance?: boolean;
+  hasReception?: boolean; // Ajouté pour PublishFlow
+  kitchenAvailable?: boolean; // Ajouté pour PublishFlow
   
   // Pour bureau
   employees?: number;
@@ -71,6 +74,7 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
       defaultData.beds = defaultData.beds ?? 1;
       defaultData.bathrooms = defaultData.bathrooms ?? 1;
       defaultData.privateEntrance = defaultData.privateEntrance ?? false;
+      defaultData.kitchenAvailable = defaultData.kitchenAvailable ?? false; // Ajouté
 
       // Réinitialiser champs non pertinents
       defaultData.employees = undefined;
@@ -84,6 +88,8 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
       defaultData.hasProjector = undefined;
       defaultData.minBookingHours = undefined;
       defaultData.wheelchairAccessible = undefined;
+      defaultData.hasReception = undefined;
+      defaultData.hasCatering = undefined;
     }
 
     if (propertyCategory === "office") {
@@ -91,6 +97,7 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
       defaultData.offices = defaultData.offices ?? 0;
       defaultData.workstations = defaultData.workstations ?? 0;
       defaultData.meetingRooms = defaultData.meetingRooms ?? 0;
+      defaultData.hasReception = defaultData.hasReception ?? false; // Ajouté
 
       // Réinitialiser champs non pertinents
       defaultData.maxGuests = undefined;
@@ -105,6 +112,8 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
       defaultData.hasProjector = undefined;
       defaultData.minBookingHours = undefined;
       defaultData.wheelchairAccessible = undefined;
+      defaultData.kitchenAvailable = undefined;
+      defaultData.hasCatering = undefined;
     }
 
     if (propertyCategory === "event") {
@@ -115,6 +124,8 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
       defaultData.hasSoundSystem = defaultData.hasSoundSystem ?? false;
       defaultData.hasProjector = defaultData.hasProjector ?? false;
       defaultData.wheelchairAccessible = defaultData.wheelchairAccessible ?? false;
+      defaultData.hasCatering = defaultData.hasCatering ?? false; // Ajouté
+      defaultData.kitchenAvailable = defaultData.kitchenAvailable ?? false; // Ajouté
 
       // Réinitialiser champs non pertinents
       defaultData.maxGuests = undefined;
@@ -126,6 +137,7 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
       defaultData.offices = undefined;
       defaultData.workstations = undefined;
       defaultData.meetingRooms = undefined;
+      defaultData.hasReception = undefined;
     }
 
     defaultData.size = defaultData.size ?? 50;
@@ -273,13 +285,7 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
             <Counter icon={Bed} label="Lits" description="Nombre total de lits (inclut canapé-lit si applicable)" field="beds" unit="lits" min={1} />
             <Counter icon={Bath} label="Salles de bain" description="Salles de bain complètes avec douche/bain" field="bathrooms" unit="salles" />
             <CheckboxOption icon={DoorClosed} label="Entrée privée" description="Les voyageurs ont leur propre entrée" field="privateEntrance" checked={localData.privateEntrance ?? false} />
-          <CheckboxOption 
-  icon={Utensils} // ou une icône appropriée
-  label="Service de restauration" 
-  description="Catering disponible ou cuisine professionnelle" 
-  field="hasCatering" 
-  checked={localData.hasCatering ?? false} 
-/>
+            <CheckboxOption icon={Utensils} label="Cuisine disponible" description="Cuisine équipée accessible aux voyageurs" field="kitchenAvailable" checked={localData.kitchenAvailable ?? false} />
           </>
         )}
 
@@ -289,6 +295,7 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
             <Counter icon={Building2} label="Bureaux privés" description="Bureaux fermés individuels ou en équipe" field="offices" unit="bureaux" />
             <Counter icon={SquareStack} label="Salles de réunion" description="Salles dédiées aux réunions" field="meetingRooms" unit="salles" />
             <Counter icon={Briefcase} label="Postes en open space" description="Espaces de travail partagés" field="workstations" unit="postes" />
+            <CheckboxOption icon={Users} label="Accueil/réception" description="Espace réception avec personnel" field="hasReception" checked={localData.hasReception ?? false} />
           </>
         )}
 
@@ -301,6 +308,8 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
             <CheckboxOption icon={Sofa} label="Système audio" description="Sono professionnelle avec micros" field="hasSoundSystem" checked={localData.hasSoundSystem ?? false} />
             <CheckboxOption icon={Sofa} label="Équipement vidéo" description="Projecteur et écrans" field="hasProjector" checked={localData.hasProjector ?? false} />
             <CheckboxOption icon={Sofa} label="Accessible PMR" description="Accès pour personnes à mobilité réduite" field="wheelchairAccessible" checked={localData.wheelchairAccessible ?? false} />
+            <CheckboxOption icon={Utensils} label="Service de restauration" description="Catering disponible ou cuisine professionnelle" field="hasCatering" checked={localData.hasCatering ?? false} />
+            <CheckboxOption icon={Utensils} label="Cuisine disponible" description="Cuisine équipée pour événements" field="kitchenAvailable" checked={localData.kitchenAvailable ?? false} />
           </>
         )}
       </div>

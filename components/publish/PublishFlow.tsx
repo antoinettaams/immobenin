@@ -1,6 +1,6 @@
 // components/publish/PublishFlow.tsx
 "use client"
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { Toaster, toast } from 'react-hot-toast'
 
@@ -8,7 +8,7 @@ import { Toaster, toast } from 'react-hot-toast'
 import { OnboardingStep } from './steps/OnboardingStep'
 import { HousingTypeStep } from './steps/HousingTypeStep'
 import { LocationStep } from './steps/LocationStep'
-import { BasicsStep } from './steps/BasicsStep'
+import { BasicsStep, type BasicsData } from './steps/BasicsStep'
 import { AmenitiesStep } from './steps/AmenitiesStep'
 import { PhotosStep } from './steps/PhotosStep'
 import { TitleStep } from './steps/TitleStep'
@@ -43,33 +43,33 @@ export interface ListingData {
 
   basics: {
     // Pour maison
-    maxGuests?: number
-    bedrooms?: number
-    beds?: number
-    bathrooms?: number
-    privateEntrance?: boolean
+    maxGuests: number
+    bedrooms: number
+    beds: number
+    bathrooms: number
+    privateEntrance: boolean
     
     // Pour bureau
-    employees?: number
-    offices?: number
-    meetingRooms?: number
-    workstations?: number
-    hasReception?: boolean
+    employees: number
+    offices: number
+    meetingRooms: number
+    workstations: number
+    hasReception: boolean
     
     // Pour événement
-    eventCapacity?: number
-    kitchenAvailable?: boolean
-    parkingSpots?: number
-    wheelchairAccessible?: boolean
-    hasStage?: boolean
-    hasSoundSystem?: boolean
-    hasProjector?: boolean
-    hasCatering?: boolean
-    minBookingHours?: number
+    eventCapacity: number
+    kitchenAvailable: boolean
+    parkingSpots: number
+    wheelchairAccessible: boolean
+    hasStage: boolean
+    hasSoundSystem: boolean
+    hasProjector: boolean
+    hasCatering: boolean
+    minBookingHours: number
     
     // Commun
-    size?: number
-    floors?: number
+    size: number
+    floors: number
   }
 
   amenities: string[]
@@ -128,10 +128,15 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
     isLoading: false
   })
   const [publishError, setPublishError] = useState<string | null>(null)
+  const [hasDraftRestored, setHasDraftRestored] = useState(false)
+  
+  // Références pour éviter les doublons
+  const draftToastShownRef = useRef(false)
+  const saveToastShownRef = useRef(false)
+  const errorToastShownRef = useRef<string>('') // Pour suivre quel toast d'erreur est affiché
 
   // LOG INITIAL
   console.log('🚀 PUBLISHFLOW INITIALISÉ')
-  console.log('📊 currentStep initial:', currentStep)
 
   const [listingData, setListingData] = useState<ListingData>({
     owner: {
@@ -150,6 +155,20 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
       size: 0,
       floors: 0,
       privateEntrance: false,
+      employees: 0,
+      offices: 0,
+      meetingRooms: 0,
+      workstations: 0,
+      hasReception: false,
+      eventCapacity: 0,
+      kitchenAvailable: false,
+      parkingSpots: 0,
+      wheelchairAccessible: false,
+      hasStage: false,
+      hasSoundSystem: false,
+      hasProjector: false,
+      hasCatering: false,
+      minBookingHours: 0,
     },
     amenities: [],
     photos: [],
@@ -174,157 +193,264 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
     }
   })
 
-  // Validation de chaque étape - TOUTES LES ÉTAPES OBLIGATOIRES
+  // Charger le brouillon au démarrage
+  useEffect(() => {
+    console.log('🔄 useEffect initial - chargement du brouillon')
+    setIsClient(true)
+    
+    const loadDraft = () => {
+      try {
+        const draft = localStorage.getItem('draft_listing')
+        if (draft) {
+          const parsedDraft = JSON.parse(draft)
+          
+          // Fonction pour fusionner les données de basics
+          const mergeBasics = (savedBasics: any, defaultBasics: ListingData['basics']) => {
+            if (!savedBasics) return defaultBasics
+            
+            return {
+              ...defaultBasics,
+              ...savedBasics,
+              // S'assurer que tous les champs numériques sont des nombres valides
+              maxGuests: Number(savedBasics.maxGuests) || 0,
+              bedrooms: Number(savedBasics.bedrooms) || 0,
+              beds: Number(savedBasics.beds) || 0,
+              bathrooms: Number(savedBasics.bathrooms) || 0,
+              size: Number(savedBasics.size) || 0,
+              floors: Number(savedBasics.floors) || 0,
+              employees: Number(savedBasics.employees) || 0,
+              offices: Number(savedBasics.offices) || 0,
+              meetingRooms: Number(savedBasics.meetingRooms) || 0,
+              workstations: Number(savedBasics.workstations) || 0,
+              eventCapacity: Number(savedBasics.eventCapacity) || 0,
+              parkingSpots: Number(savedBasics.parkingSpots) || 0,
+              minBookingHours: Number(savedBasics.minBookingHours) || 0,
+              // Champs booléens
+              privateEntrance: Boolean(savedBasics.privateEntrance),
+              hasReception: Boolean(savedBasics.hasReception),
+              kitchenAvailable: Boolean(savedBasics.kitchenAvailable),
+              wheelchairAccessible: Boolean(savedBasics.wheelchairAccessible),
+              hasStage: Boolean(savedBasics.hasStage),
+              hasSoundSystem: Boolean(savedBasics.hasSoundSystem),
+              hasProjector: Boolean(savedBasics.hasProjector),
+              hasCatering: Boolean(savedBasics.hasCatering),
+            }
+          }
+          
+          // Charger les données du brouillon
+          setListingData(prev => ({
+            ...prev,
+            ...parsedDraft,
+            basics: mergeBasics(parsedDraft.basics, prev.basics)
+          }))
+          
+          // Charger l'étape sauvegardée
+          const savedStep = localStorage.getItem('draft_current_step')
+          if (savedStep) {
+            const step = parseInt(savedStep, 10)
+            if (!isNaN(step) && step >= 0 && step <= 9) {
+              setCurrentStep(step)
+            }
+          }
+          
+          setHasDraftRestored(true)
+          console.log('📂 Brouillon restauré, étape:', savedStep)
+        }
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement du brouillon:', error)
+      }
+    }
+    
+    loadDraft()
+    
+    const timer = setTimeout(() => {
+      console.log('⏱️ Validation initiale après timeout')
+      validateCurrentStep()
+    }, 100)
+    
+    return () => {
+      console.log('🧹 Cleanup timeout initial')
+      clearTimeout(timer)
+    }
+  }, [])
+
+  // Afficher le toast de brouillon restauré - UNE SEULE FOIS au chargement initial
+  useEffect(() => {
+    if (isClient && hasDraftRestored && !draftToastShownRef.current) {
+      console.log('🎯 Afficher toast de brouillon restauré (une seule fois)')
+      
+      // Marquer comme montré
+      draftToastShownRef.current = true
+      
+      const showDraftToast = () => {
+        const toastId = toast.custom((t) => (
+          <div 
+            data-draft-restored="true"
+            className={`${t.visible ? 'animate-enter' : 'animate-leave'} 
+              max-w-md w-full bg-blue-50 shadow-lg rounded-lg pointer-events-auto 
+              flex flex-col ring-1 ring-blue-200 border-l-4 border-blue-500`}
+          >
+            <div className="flex-1 p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium text-blue-900">Brouillon restauré</p>
+                  <p className="mt-1 text-sm text-blue-700">
+                    Vous avez un brouillon enregistré. Continuez là où vous vous êtes arrêté.
+                  </p>
+                  <div className="mt-2 flex items-center text-sm text-blue-600">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100">
+                      Étape {currentStep + 1}/10
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex border-t border-blue-200 divide-x divide-blue-200">
+              <button
+                onClick={() => {
+                  toast.dismiss(toastId)
+                  draftToastShownRef.current = false
+                }}
+                className="flex-1 border border-transparent rounded-bl-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Rester
+              </button>
+              <button
+                onClick={() => {
+                  toast.dismiss(toastId)
+                  // Effacer le brouillon si l'utilisateur préfère recommencer
+                  localStorage.removeItem('draft_listing')
+                  localStorage.removeItem('draft_current_step')
+                  localStorage.removeItem('draft_saved_at')
+                  draftToastShownRef.current = false
+                  toast.success(
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Brouillon effacé. Commencez une nouvelle annonce.</span>
+                    </div>,
+                    { duration: 3000 }
+                  )
+                }}
+                className="flex-1 border border-transparent rounded-br-lg p-4 flex items-center justify-center text-sm font-medium text-red-600 hover:text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                Effacer
+              </button>
+            </div>
+          </div>
+        ), {
+          duration: 8000,
+          position: 'top-center',
+        })
+
+        // Surveiller quand le toast disparaît
+        setTimeout(() => {
+          draftToastShownRef.current = false
+        }, 8500) // Un peu plus long que la durée du toast
+      }
+      
+      // Petit délai pour s'assurer que tout est chargé
+      setTimeout(showDraftToast, 500)
+    }
+  }, [isClient, hasDraftRestored]) // Retirer currentStep des dépendances
+
+  // Validation de chaque étape
   const validateCurrentStep = useCallback((): boolean => {
     console.log(`🔍 VALIDATION étape ${currentStep}`)
     
     let isValid = false
 
     switch (currentStep) {
-      case 0: // OnboardingStep - TOUS LES CHAMPS REQUIS
+      case 0: // OnboardingStep
         const { telephone, email, nom } = listingData.owner
         isValid = Boolean(
           telephone && 
           email && 
           nom &&
-          telephone.trim().length >= 8 && // Au moins 8 caractères pour un téléphone
-          email.trim().length > 0 && // Email non vide
-          email.includes('@') && // Email valide
+          telephone.trim().length >= 8 &&
+          email.trim().length > 0 &&
+          email.includes('@') &&
           email.includes('.') &&
-          nom.trim().length >= 2 // Nom d'au moins 2 caractères
+          nom.trim().length >= 2
         )
-        console.log('📋 Validation étape 0 (Onboarding):', { 
-          telephoneLength: telephone?.trim().length, 
-          emailValid: email?.includes('@'), 
-          nomLength: nom?.trim().length, 
-          isValid 
-        })
         break
 
-      case 1: // HousingTypeStep - TYPE ET SOUS-TYPE REQUIS
+      case 1: // HousingTypeStep
         isValid = Boolean(
           listingData.propertyType.category && 
           listingData.propertyType.subType.trim() && 
           listingData.propertyType.subType.trim().length > 0 &&
           listingData.propertyType.privacy
         )
-        console.log('📋 Validation étape 1 (HousingType):', { 
-          category: listingData.propertyType.category, 
-          subType: listingData.propertyType.subType, 
-          privacy: listingData.propertyType.privacy,
-          isValid 
-        })
         break
 
-      case 2: // LocationStep - VILLE ET ADRESSE REQUISES
+      case 2: // LocationStep
         isValid = Boolean(
           listingData.location.city.trim() && 
           listingData.location.city.trim().length > 0 &&
           listingData.location.address.trim() && 
           listingData.location.address.trim().length > 0
         )
-        console.log('📋 Validation étape 2 (Location):', { 
-          city: listingData.location.city, 
-          address: listingData.location.address, 
-          isValid 
-        })
         break
 
-      case 3: // BasicsStep - CHAMPS SPÉCIFIQUES SELON CATÉGORIE
+      case 3: // BasicsStep
         if (listingData.propertyType.category === 'house') {
           isValid = Boolean(
-            listingData.basics.maxGuests !== undefined && 
-            listingData.basics.maxGuests > 0 && // Au moins 1 voyageur
-            listingData.basics.beds !== undefined && 
-            listingData.basics.beds > 0 && // Au moins 1 lit
-            listingData.basics.size !== undefined && 
-            listingData.basics.size > 0 // Surface positive
+            listingData.basics.maxGuests > 0 &&
+            listingData.basics.beds > 0 &&
+            listingData.basics.size > 0
           )
-          console.log('📋 Validation étape 3 (Basics - house):', { 
-            maxGuests: listingData.basics.maxGuests, 
-            beds: listingData.basics.beds,
-            size: listingData.basics.size,
-            isValid 
-          })
         } else if (listingData.propertyType.category === 'office') {
           isValid = Boolean(
-            listingData.basics.employees !== undefined && 
-            listingData.basics.employees > 0 && // Au moins 1 employé
-            listingData.basics.size !== undefined && 
-            listingData.basics.size > 0 // Surface positive
+            listingData.basics.employees > 0 &&
+            listingData.basics.size > 0
           )
-          console.log('📋 Validation étape 3 (Basics - office):', { 
-            employees: listingData.basics.employees, 
-            size: listingData.basics.size,
-            isValid 
-          })
         } else if (listingData.propertyType.category === 'event') {
           isValid = Boolean(
-            listingData.basics.eventCapacity !== undefined && 
-            listingData.basics.eventCapacity > 0 && // Capacité positive
-            listingData.basics.size !== undefined && 
-            listingData.basics.size > 0 // Surface positive
+            listingData.basics.eventCapacity > 0 &&
+            listingData.basics.size > 0
           )
-          console.log('📋 Validation étape 3 (Basics - event):', { 
-            eventCapacity: listingData.basics.eventCapacity, 
-            size: listingData.basics.size,
-            isValid 
-          })
         }
         break
 
-      case 4: // AmenitiesStep - Au moins une commodité sélectionnée
+      case 4: // AmenitiesStep
         isValid = listingData.amenities.length > 0
-        console.log('📋 Validation étape 4 (Amenities):', { 
-          amenitiesCount: listingData.amenities.length, 
-          isValid 
-        })
         break
 
-      case 5: // PhotosStep - Au moins une photo requise
+      case 5: // PhotosStep
         isValid = listingData.photos.length >= 1
-        console.log('📋 Validation étape 5 (Photos):', { 
-          photosCount: listingData.photos.length, 
-          isValid 
-        })
         break
 
-      case 6: // TitleStep - Titre d'au moins 10 caractères
+      case 6: // TitleStep
         isValid = Boolean(
           listingData.title.trim() && 
           listingData.title.trim().length >= 10
         )
-        console.log('📋 Validation étape 6 (Title):', { 
-          title: listingData.title, 
-          length: listingData.title?.trim().length, 
-          isValid 
-        })
         break
 
-      case 7: // DescriptionStep - Résumé d'au moins 50 caractères
+      case 7: // DescriptionStep
         isValid = Boolean(
           listingData.description.summary.trim() && 
           listingData.description.summary.trim().length >= 50
         )
-        console.log('📋 Validation étape 7 (Description):', { 
-          summaryLength: listingData.description.summary?.trim().length, 
-          isValid 
-        })
         break
 
-      case 8: // PriceStep - Prix de base positif
+      case 8: // PriceStep
         isValid = Boolean(
           listingData.pricing.basePrice && 
           listingData.pricing.basePrice > 0
         )
-        console.log('📋 Validation étape 8 (Price):', { 
-          basePrice: listingData.pricing.basePrice, 
-          isValid 
-        })
         break
 
-      case 9: // ReviewStep - Validation finale avant publication
-        // Pour l'étape de revue, on vérifie que TOUT est rempli
+      case 9: // ReviewStep
         const allStepsValid = 
           Boolean(listingData.owner.telephone.trim()) &&
           Boolean(listingData.owner.email.trim()) &&
@@ -337,7 +463,6 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           Boolean(listingData.description.summary.trim()) &&
           listingData.pricing.basePrice > 0;
         
-        // Validation spécifique selon catégorie
         let basicsValid = false;
         if (listingData.propertyType.category === 'house') {
           basicsValid = Boolean(
@@ -358,16 +483,10 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
         }
         
         isValid = allStepsValid && basicsValid;
-        console.log('📋 Validation étape 9 (Review):', { 
-          allStepsValid, 
-          basicsValid, 
-          isValid 
-        })
         break
 
       default:
         isValid = false
-        console.log('📋 Validation étape inconnue:', currentStep)
     }
 
     console.log(`✅ Résultat validation étape ${currentStep}:`, isValid)
@@ -375,38 +494,91 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
     return isValid
   }, [currentStep, listingData])
 
-  useEffect(() => {
-    console.log('🔄 useEffect initial - setIsClient(true)')
-    setIsClient(true)
-    const timer = setTimeout(() => {
-      console.log('⏱️ Validation initiale après timeout')
-      validateCurrentStep()
-    }, 100)
-    return () => {
-      console.log('🧹 Cleanup timeout initial')
-      clearTimeout(timer)
-    }
-  }, [])
-
   // Mise à jour des données
   const updateData = useCallback(<K extends keyof ListingData>(section: K, data: ListingData[K]) => {
-    console.log(`📝 UPDATE data - section: ${section}`, data)
-    setListingData(prev => ({
-      ...prev,
-      [section]: data
-    }))
-  }, [])
+    console.log(`📝 UPDATE data - section: ${section}`)
+    setListingData(prev => {
+      const newData = {
+        ...prev,
+        [section]: data
+      }
+      
+      // Sauvegarder automatiquement dans le brouillon
+      if (isClient) {
+        localStorage.setItem('draft_listing', JSON.stringify(newData))
+        localStorage.setItem('draft_current_step', currentStep.toString())
+        localStorage.setItem('draft_saved_at', new Date().toISOString())
+      }
+      
+      return newData
+    })
+  }, [isClient, currentStep])
+
+  // Mise à jour spécifique pour les basics (qui nécessite un traitement spécial)
+  const updateBasicsData = useCallback((data: BasicsData) => {
+    console.log('📝 UPDATE basics data')
+    setListingData(prev => {
+      // S'assurer que tous les champs sont présents
+      const newBasicsData: ListingData['basics'] = {
+        ...prev.basics,
+        // Champs communs
+        size: data.size || 0,
+        floors: data.floors || 0,
+        // Champs pour maison
+        maxGuests: data.maxGuests || 0,
+        bedrooms: data.bedrooms || 0,
+        beds: data.beds || 0,
+        bathrooms: data.bathrooms || 0,
+        privateEntrance: data.privateEntrance || false,
+        // Champs pour bureau
+        employees: data.employees || 0,
+        offices: data.offices || 0,
+        meetingRooms: data.meetingRooms || 0,
+        workstations: data.workstations || 0,
+        hasReception: data.hasReception || false,
+        // Champs pour événement
+        eventCapacity: data.eventCapacity || 0,
+        kitchenAvailable: data.kitchenAvailable || false,
+        parkingSpots: data.parkingSpots || 0,
+        wheelchairAccessible: data.wheelchairAccessible || false,
+        hasStage: data.hasStage || false,
+        hasSoundSystem: data.hasSoundSystem || false,
+        hasProjector: data.hasProjector || false,
+        hasCatering: data.hasCatering || false,
+        minBookingHours: data.minBookingHours || 0,
+      }
+      
+      const newData = {
+        ...prev,
+        basics: newBasicsData
+      }
+      
+      // Sauvegarder automatiquement dans le brouillon
+      if (isClient) {
+        localStorage.setItem('draft_listing', JSON.stringify(newData))
+        localStorage.setItem('draft_current_step', currentStep.toString())
+        localStorage.setItem('draft_saved_at', new Date().toISOString())
+      }
+      
+      return newData
+    })
+  }, [isClient, currentStep])
+
+  // Sauvegarder automatiquement quand l'étape change
+  useEffect(() => {
+    if (isClient && hasDraftRestored) {
+      localStorage.setItem('draft_current_step', currentStep.toString())
+      localStorage.setItem('draft_saved_at', new Date().toISOString())
+    }
+  }, [currentStep, isClient, hasDraftRestored])
 
   // Valider après chaque mise à jour de données
   useEffect(() => {
     if (isClient) {
-      console.log('🔄 useEffect validation - isClient:', isClient)
       const timer = setTimeout(() => {
-        console.log('⏱️ Validation après update')
         validateCurrentStep()
       }, 50)
       return () => {
-        console.log('🧹 Cleanup validation')
         clearTimeout(timer)
       }
     }
@@ -415,17 +587,35 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
   // Navigation
   const nextStep = async () => {
     console.log('➡️ NEXTSTEP appelé - étape actuelle:', currentStep)
-    console.log('📊 Validation actuelle:', stepValidation)
     
     if (!stepValidation.isValid || stepValidation.isLoading) {
-      console.log('❌ NEXTSTEP bloqué - raison:', {
-        isValid: stepValidation.isValid,
-        isLoading: stepValidation.isLoading
-      })
-      
-      // Afficher un toast d'erreur si validation échoue
+      // Afficher un toast d'erreur avec prévention des doublons
       if (!stepValidation.isValid && isClient) {
-        toast.error(
+        const errorKey = `error-step-${currentStep}`
+        
+        // Vérifier si ce toast d'erreur est déjà affiché
+        if (errorToastShownRef.current === errorKey) {
+          console.log('⚠️ Toast d\'erreur déjà affiché pour cette étape, on ignore')
+          return
+        }
+        
+        // Marquer ce toast comme affiché
+        errorToastShownRef.current = errorKey
+        
+        const errorMessages = {
+          0: "Veuillez remplir tous vos coordonnées",
+          1: "Veuillez sélectionner un type de propriété",
+          2: "Veuillez renseigner la ville et l'adresse",
+          3: "Veuillez remplir les informations de base",
+          4: "Veuillez sélectionner au moins une commodité",
+          5: "Veuillez ajouter au moins une photo",
+          6: "Le titre doit faire au moins 10 caractères",
+          7: "Le résumé doit faire au moins 50 caractères",
+          8: "Veuillez définir un prix de base",
+          9: "Veuillez vérifier toutes les informations"
+        }
+        
+        const toastId = toast.error(
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -434,16 +624,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
               <span className="font-semibold">Champs requis manquants</span>
             </div>
             <p className="text-sm">
-              {currentStep === 0 && "Veuillez remplir tous vos coordonnées"}
-              {currentStep === 1 && "Veuillez sélectionner un type de propriété"}
-              {currentStep === 2 && "Veuillez renseigner la ville et l'adresse"}
-              {currentStep === 3 && "Veuillez remplir les informations de base"}
-              {currentStep === 4 && "Veuillez sélectionner au moins une commodité"}
-              {currentStep === 5 && "Veuillez ajouter au moins une photo"}
-              {currentStep === 6 && "Le titre doit faire au moins 10 caractères"}
-              {currentStep === 7 && "Le résumé doit faire au moins 50 caractères"}
-              {currentStep === 8 && "Veuillez définir un prix de base"}
-              {currentStep === 9 && "Veuillez vérifier toutes les informations"}
+              {errorMessages[currentStep as keyof typeof errorMessages]}
             </p>
           </div>,
           {
@@ -452,84 +633,123 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
               background: '#FEF2F2',
               color: '#DC2626',
               border: '1px solid #FECACA',
-            },
+            }
           }
         )
+
+        // Surveiller quand le toast disparaît
+        setTimeout(() => {
+          errorToastShownRef.current = ''
+        }, 4500) // Un peu plus long que la durée du toast
       }
-      
       return
     }
     
-    console.log('🔄 NEXTSTEP - début loading')
+    // Réinitialiser le ref d'erreur quand on passe à l'étape suivante
+    errorToastShownRef.current = ''
+    
     setStepValidation(prev => ({ ...prev, isLoading: true }))
     
-    // Simulation de chargement courte
     await new Promise(resolve => setTimeout(resolve, 300))
     
     if (currentStep < 9) {
-      console.log(`🔼 Passage étape ${currentStep} → ${currentStep + 1}`)
       if (isClient) {
         window.scrollTo(0, 0)
       }
       setCurrentStep(prev => prev + 1)
       setStepValidation(prev => ({ ...prev, isLoading: false }))
-      console.log('✅ NEXTSTEP terminé')
-    } else {
-      console.log('⚠️ NEXTSTEP - Déjà à la dernière étape')
     }
   }
 
   const prevStep = () => {
-    console.log('⬅️ PREVSTEP appelé - étape actuelle:', currentStep)
     if (currentStep > 0 && !stepValidation.isLoading) {
-      console.log(`🔽 Retour étape ${currentStep} → ${currentStep - 1}`)
       if (isClient) {
         window.scrollTo(0, 0)
       }
       setCurrentStep(prev => prev - 1)
-      console.log('✅ PREVSTEP terminé')
-    } else {
-      console.log('❌ PREVSTEP bloqué - raison:', {
-        currentStep,
-        isLoading: stepValidation.isLoading
-      })
     }
   }
 
-  // Fonction pour sauvegarder et quitter
+  // Fonction pour sauvegarder et quitter - EMPÊCHER LES DOUBLONS
   const handleSaveAndExit = () => {
     console.log('💾 SAVE AND EXIT appelé')
     
-    // Afficher un toast de confirmation
-    toast.custom((t) => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
-        <div className="flex-1 w-0 p-4">
+    // Empêcher les doublons avec ref
+    if (saveToastShownRef.current) {
+      console.log('⚠️ Toast déjà affiché, on ignore')
+      return
+    }
+    
+    saveToastShownRef.current = true
+    
+    const toastId = toast.custom((t) => (
+      <div 
+        data-save-exit="true"
+        className={`${t.visible ? 'animate-enter' : 'animate-leave'} 
+          max-w-md w-full bg-green-50 shadow-lg rounded-lg pointer-events-auto 
+          flex flex-col ring-1 ring-green-200 border-l-4 border-green-500`}
+      >
+        <div className="flex-1 p-4">
           <div className="flex items-start">
-            <div className="flex-shrink-0 pt-0.5">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
             <div className="ml-3 flex-1">
-              <p className="text-sm font-medium text-gray-900">Annonce sauvegardée</p>
-              <p className="mt-1 text-sm text-gray-500">Votre brouillon a été enregistré. Vous pouvez le reprendre plus tard.</p>
+              <p className="text-sm font-medium text-green-900">Brouillon sauvegardé</p>
+              <p className="mt-1 text-sm text-green-700">
+                Votre annonce a été sauvegardée. Vous pourrez la reprendre plus tard.
+              </p>
+              <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100">
+                  Étape {currentStep + 1}/10 sauvegardée
+                </span>
+                <span className="text-xs opacity-75">
+                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
             </div>
           </div>
         </div>
-        <div className="flex border-l border-gray-200">
+        <div className="flex border-t border-green-200 divide-x divide-green-200">
           <button
             onClick={() => {
-              toast.dismiss(t.id);
-              if (isClient && typeof window !== 'undefined' && window.localStorage) {
-                localStorage.setItem('draft_listing', JSON.stringify(listingData));
-                setTimeout(() => {
-                  window.location.href = '/';
-                }, 500);
-              }
+              toast.dismiss(toastId)
+              saveToastShownRef.current = false
             }}
-            className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 border border-transparent rounded-bl-lg p-4 flex items-center justify-center text-sm font-medium text-green-600 hover:text-green-500 hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            Rester
+          </button>
+          <button
+            onClick={() => {
+              toast.dismiss(toastId)
+              
+              // Sauvegarder dans localStorage
+              localStorage.setItem('draft_listing', JSON.stringify(listingData))
+              localStorage.setItem('draft_current_step', currentStep.toString())
+              localStorage.setItem('draft_saved_at', new Date().toISOString())
+              
+              // Afficher un message de confirmation supplémentaire
+              toast.success(
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Redirection vers l'accueil...</span>
+                </div>,
+                { duration: 2000 }
+              )
+              
+              // Redirection différée
+              setTimeout(() => {
+                window.location.href = '/'
+              }, 1500)
+            }}
+            className="flex-1 border border-transparent rounded-br-lg p-4 flex items-center justify-center text-sm font-medium text-green-700 hover:text-green-600 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500"
           >
             OK
           </button>
@@ -537,22 +757,53 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
       </div>
     ), {
       duration: 10000,
-    });
+      position: 'top-center',
+    })
+
+    // Surveiller quand le toast disparaît
+    setTimeout(() => {
+      saveToastShownRef.current = false
+    }, 10500) // Un peu plus long que la durée du toast
   }
 
-  // Fonction pour publier avec toast personnalisé
+  // Fonction pour effacer le brouillon
+  const handleClearDraft = () => {
+    localStorage.removeItem('draft_listing')
+    localStorage.removeItem('draft_current_step')
+    localStorage.removeItem('draft_saved_at')
+    
+    // Réinitialiser les refs
+    draftToastShownRef.current = false
+    saveToastShownRef.current = false
+    errorToastShownRef.current = ''
+    
+    toast.success(
+      <div className="flex items-center gap-2">
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+        <span>Brouillon effacé</span>
+      </div>,
+      { duration: 3000 }
+    )
+    
+    // Recharger la page pour recommencer
+    setTimeout(() => {
+      window.location.reload()
+    }, 1000)
+  }
+
+  // Fonction pour publier
   const handlePublish = async () => {
     console.log('🚀 HANDLEPUBLISH - Début')
     
     if (stepValidation.isLoading) {
-      console.log('❌ Publication bloquée: déjà en cours de chargement')
       return
     }
 
     setStepValidation(prev => ({ ...prev, isLoading: true }))
     setPublishError(null)
 
-    // Toast de chargement
     const loadingToast = toast.loading(
       <div className="flex items-center gap-2">
         <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -573,19 +824,16 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
 
       const prismaData = {
         onboarding: listingData.owner,
-
         housingType: {
           category: listingData.propertyType.category.toUpperCase(),
           subType: listingData.propertyType.subType,
           privacy: listingData.propertyType.privacy.toUpperCase()
         },
-
         location: listingData.location,
         basics: listingData.basics,
         amenities: listingData.amenities,
         title: listingData.title,
         description: listingData.description,
-
         price: {
           basePrice: Number(listingData.pricing.basePrice),
           currency: listingData.pricing.currency,
@@ -595,7 +843,6 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           extraGuestFee: Number(listingData.pricing.extraGuestFee),
           securityDeposit: Number(listingData.pricing.securityDeposit)
         },
-
         rules: {
           checkInTime: listingData.rules.checkInTime,
           checkOutTime: listingData.rules.checkOutTime,
@@ -603,39 +850,35 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
         }
       }
 
-      console.log('📋 Données préparées:', prismaData)
-      console.log('📸 Nombre de photos:', listingData.photos.length)
-      
-      // ✅ JSON part
       formData.append("data", JSON.stringify(prismaData))
 
-      // ✅ files part
-      listingData.photos.forEach((photo, index) => {
+      listingData.photos.forEach((photo) => {
         if (photo.file) {
-          console.log(`📤 Ajout photo ${index + 1}:`, photo.file.name, photo.file.type, photo.file.size)
           formData.append("photos", photo.file)
         }
       })
 
-      console.log('📤 Envoi à /api/publish...')
-      
       const response = await fetch("/api/publish", {
         method: "POST",
         body: formData
       })
 
-      console.log('📊 Statut de la réponse:', response.status)
-      console.log('📊 Headers:', response.headers)
-      
       const result = await response.json()
-      console.log('📦 Réponse JSON:', result)
 
       if (!response.ok) {
-        console.error('❌ Erreur API:', result.error)
         throw new Error(result.error || 'Erreur lors de la publication')
       }
 
-      // Toast de succès
+      // Effacer le brouillon après publication réussie
+      localStorage.removeItem('draft_listing')
+      localStorage.removeItem('draft_current_step')
+      localStorage.removeItem('draft_saved_at')
+      
+      // Réinitialiser les refs
+      draftToastShownRef.current = false
+      saveToastShownRef.current = false
+      errorToastShownRef.current = ''
+
       toast.success(
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
@@ -656,23 +899,17 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
             color: '#166534',
             border: '1px solid #BBF7D0',
           },
-          iconTheme: {
-            primary: '#16A34A',
-            secondary: '#FFFFFF',
-          }
         }
       )
 
-      // Redirection après 2 secondes
       setTimeout(() => {
         window.location.href = "/?published=true"
       }, 2000)
 
     } catch (e: any) {
-      console.error('❌ Erreur complète:', e)
+      console.error('❌ Erreur:', e)
       setPublishError(e.message)
       
-      // Toast d'erreur
       toast.error(
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
@@ -688,27 +925,19 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
         {
           id: loadingToast,
           duration: 7000,
-          style: {
-            background: '#FEF2F2',
-            color: '#DC2626',
-            border: '1px solid #FECACA',
-          },
         }
       )
     } finally {
       setStepValidation(prev => ({ ...prev, isLoading: false }))
-      console.log('🏁 handlePublish terminé')
     }
   }
 
   // Rendu de l'étape actuelle
   const renderStep = () => {
-    console.log(`🎬 RENDERSTEP - étape ${currentStep}`)
     const { propertyType } = listingData
     
     switch (currentStep) {
       case 0:
-        console.log('🎯 Rendu: OnboardingStep')
         return (
           <OnboardingStep
             key="onboarding"
@@ -718,7 +947,6 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           />
         )
       case 1:
-        console.log('🎯 Rendu: HousingTypeStep')
         return (
           <HousingTypeStep
             key="housing-type"
@@ -728,7 +956,6 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           />
         )
       case 2:
-        console.log('🎯 Rendu: LocationStep')
         return (
           <LocationStep
             key="location"
@@ -739,19 +966,17 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           />
         )
       case 3:
-        console.log('🎯 Rendu: BasicsStep')
         return (
           <BasicsStep
             key="basics"
             data={listingData.basics}
             propertyCategory={propertyType.category}
-            onUpdate={(data) => updateData('basics', data)}
+            onUpdate={updateBasicsData}
             onNext={nextStep}
             onBack={prevStep}
           />
         )
       case 4:
-        console.log('🎯 Rendu: AmenitiesStep')
         return (
           <AmenitiesStep
             key="amenities"
@@ -763,7 +988,6 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           />
         )
       case 5:
-        console.log('🎯 Rendu: PhotosStep')
         return (
           <PhotosStep
             key="photos"
@@ -774,7 +998,6 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           />
         )
       case 6:
-        console.log('🎯 Rendu: TitleStep')
         return (
           <TitleStep
             key="title"
@@ -787,7 +1010,6 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           />
         )
       case 7:
-        console.log('🎯 Rendu: DescriptionStep')
         return (
           <DescriptionStep
             key="description"
@@ -801,7 +1023,6 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           />
         )
       case 8:
-        console.log('🎯 Rendu: PriceStep')
         return (
           <PriceStep
             key="price"
@@ -814,13 +1035,11 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           />
         )
       case 9:
-        console.log('🎯 Rendu: ReviewStep (DERNIÈRE ÉTAPE)')
         return (
           <ReviewStep
             key="review"
             data={listingData}
             onEdit={(stepNumber) => {
-              console.log('✏️ Edit vers étape:', stepNumber)
               setCurrentStep(stepNumber)
             }}
             onSubmit={handlePublish}
@@ -830,13 +1049,11 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           />
         )
       default:
-        console.log('❌ Rendu: étape inconnue')
         return null
     }
   }
 
   if (!isClient) {
-    console.log('⏳ Pas encore client - affichage loading')
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -847,11 +1064,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
     )
   }
 
-  // Calcul de la progression pour la barre
   const progressPercentage = (currentStep / 9) * 100
-  console.log(`📊 Progression: ${progressPercentage}% (étape ${currentStep}/9)`)
-  console.log(`🎯 Bouton doit dire: ${currentStep === 9 ? 'PUBLIER' : 'SUIVANT'}`)
-  console.log(`🔘 Bouton activé?: ${stepValidation.isValid && !stepValidation.isLoading}`)
 
   return (
     <>
@@ -885,40 +1098,45 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
               >
                 <div className="text-brand group-hover:scale-110 transition-transform duration-300">
                   <svg 
-  width="32" 
-  height="32" 
-  viewBox="0 0 100 100" 
-  fill="none" 
-  xmlns="http://www.w3.org/2000/svg"
-  aria-hidden="true"
->
-  {/* Forme principale (Maison / Pin) */}
-  <path 
-    d="M50 5L15 40V70C15 75 20 80 50 95C80 80 85 75 85 70V40L50 5Z" 
-    fill="#FF385C" 
-  />
-  
-  {/* Cercle central */}
-  <circle cx="50" cy="55" r="12" fill="white" />
-  
-  {/* Fenêtre dans le toit */}
-  <rect x="44" y="24" width="12" height="10" fill="white" />
-  <line x1="50" y1="24" x2="50" y2="34" stroke="#FF385C" strokeWidth="1.5" />
-  <line x1="44" y1="29" x2="56" y2="29" stroke="#FF385C" strokeWidth="1.5" />
-</svg>
+                    width="32" 
+                    height="32" 
+                    viewBox="0 0 100 100" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                  >
+                    <path 
+                      d="M50 5L15 40V70C15 75 20 80 50 95C80 80 85 75 85 70V40L50 5Z" 
+                      fill="#FF385C" 
+                    />
+                    <circle cx="50" cy="55" r="12" fill="white" />
+                    <rect x="44" y="24" width="12" height="10" fill="white" />
+                    <line x1="50" y1="24" x2="50" y2="34" stroke="#FF385C" strokeWidth="1.5" />
+                    <line x1="44" y1="29" x2="56" y2="29" stroke="#FF385C" strokeWidth="1.5" />
+                  </svg>
                 </div>
                 <span className="text-xl font-extrabold tracking-tight text-gray-900 group-hover:text-brand transition-colors">
                   ImmoBenin
                 </span>
               </Link>
               
-              {/* Bouton sauvegarder */}
-              <button 
-                onClick={handleSaveAndExit}
-                className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Sauvegarder et quitter
-              </button>
+              {/* Boutons */}
+              <div className="flex items-center gap-4">
+                {hasDraftRestored && (
+                  <button 
+                    onClick={handleClearDraft}
+                    className="text-sm font-medium text-red-600 hover:text-red-800 px-4 py-2 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    Effacer le brouillon
+                  </button>
+                )}
+                <button 
+                  onClick={handleSaveAndExit}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  Sauvegarder et quitter
+                </button>
+              </div>
             </div>
           </div>
         </header>
@@ -933,16 +1151,12 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           <div className="max-w-5xl mx-auto px-8 py-4">
             {/* Barre de progression */}
             <div className="relative mb-6">
-              {/* Ligne de fond */}
               <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-200 -translate-y-1/2" />
-              
-              {/* Ligne de progression */}
               <div 
                 className="absolute top-1/2 left-0 h-0.5 bg-brand -translate-y-1/2 transition-all duration-500"
                 style={{ width: `${progressPercentage}%` }}
               />
               
-              {/* Points d'étape */}
               <div className="relative flex justify-between">
                 {Array.from({ length: 10 }).map((_, index) => {
                   const isActive = index === currentStep
