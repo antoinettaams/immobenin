@@ -1,7 +1,29 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Search as SearchIcon, Map, Wifi, Home, Users, Bath, Bed, X, Phone, Check, ChevronLeft, ChevronRight, Calendar, Clock, Image as ImageIcon } from 'lucide-react';
+import { 
+  ArrowLeft, Search as SearchIcon, Map, Wifi, Home, Users, 
+  Bath, Bed, X, Phone, Check, ChevronLeft, ChevronRight, 
+  Calendar, Clock, Image as ImageIcon, MapPin, 
+  Building, Maximize, Car, Wind, Coffee, 
+  Tv, Music, Projector, ChefHat, Bell, Shield, Key,
+  Accessibility, // Icône pour accessibilité/PMR
+  Droplets, // Pour piscine
+  ParkingCircle, // Pour parking
+  Microwave, // Pour cuisine
+  Cable, // Pour TV
+  Utensils, // Pour restauration
+  DoorOpen, // Pour entrée
+  Square, // Pour surface
+  Briefcase, // Pour bureau
+  Printer, // Pour réunion
+  Sofa, // Pour salle
+  Waves, // Pour son
+  Presentation, // Pour projecteur
+  GlassWater, // Pour bar
+  Dumbbell, // Pour fitness
+  Trees // Pour jardin
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SearchProps {
@@ -14,6 +36,9 @@ interface EquipementDetail {
   code?: string;
   categorie?: string;
   description?: string | null;
+  pourMaison?: boolean;
+  pourBureau?: boolean;
+  pourEvenement?: boolean;
 }
 
 interface PropertyDescription {
@@ -32,43 +57,77 @@ interface Property {
   type: string;
   category: "HOUSE" | "OFFICE" | "EVENT";
   subType: string;
+  privacy?: string | null;
   location: string;
   city: string;
   address: string;
+  country?: string;
+  postalCode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  
+  // PriceStep
   price: number;
   currency: string;
-  capacity: number;
-  bedrooms: number;
-  bathrooms: number;
-  images: string[]; // Images réelles de la base
-  wifi: boolean;
-  amenities: string[];
-  equipementsDetails?: EquipementDetail[];
-  description?: string | PropertyDescription;
-  owner: {
-    name: string;
-    phone: string;
-    email?: string;
-    id?: number;
-  };
-  size?: number | null;
-  floors?: number | null;
-  isPublished: boolean;
-  
-  // Champs spécifiques
-  maxGuests?: number | null;
-  employees?: number | null;
-  eventCapacity?: number | null;
-  parkingSpots?: number | null;
-  meetingRooms?: number | null;
-  
-  // Informations de prix
+  weeklyDiscount?: number | null;
+  monthlyDiscount?: number | null;
   cleaningFee?: number | null;
   extraGuestFee?: number | null;
   securityDeposit?: number | null;
-  weeklyDiscount?: number | null;
-  monthlyDiscount?: number | null;
   
+  // BasicsStep
+  size?: number | null;
+  floors?: number | null;
+  capacity: number;
+  bedrooms?: number | null;
+  beds?: number | null;
+  bathrooms?: number | null;
+  privateEntrance?: boolean | null;
+  
+  // BasicsStep - Office
+  employees?: number | null;
+  offices?: number | null;
+  meetingRooms?: number | null;
+  workstations?: number | null;
+  
+  // BasicsStep - Event
+  eventCapacity?: number | null;
+  parkingSpots?: number | null;
+  wheelchairAccessible?: boolean | null;
+  hasStage?: boolean | null;
+  hasSoundSystem?: boolean | null;
+  hasProjector?: boolean | null;
+  hasCatering?: boolean | null;
+  minBookingHours?: number | null;
+  
+  // Images
+  images: string[];
+  img: string;
+  
+  // Description
+  description?: PropertyDescription | string;
+  
+  // Propriétaire
+  owner: {
+    id?: number;
+    name: string;
+    phone: string;
+    email?: string;
+    createdAt?: Date;
+  };
+  
+  // Équipements
+  wifi: boolean;
+  amenities: string[];
+  equipementsDetails?: EquipementDetail[];
+  
+  // Règles
+  checkInTime?: string;
+  checkOutTime?: string;
+  childrenAllowed?: boolean;
+  
+  // Autres
+  isPublished: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -85,148 +144,204 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
 
-  // Fonction pour convertir blob URL en base64
-  const convertBlobToBase64 = async (blobUrl: string): Promise<string> => {
-    try {
-      const response = await fetch(blobUrl);
-      const blob = await response.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (error) {
-      console.error('Erreur conversion blob en base64:', error);
-      return '';
-    }
-  };
-
-  // Fonction pour normaliser les données de l'API - CORRIGÉE (maintenant async)
-  const normalizePropertyData = async (apiData: any): Promise<Property> => {
+  // Fonction pour normaliser les données de l'API
+  const normalizePropertyData = (apiData: any): Property => {
     console.log('🔄 Normalisation des données API:', apiData);
     
-    // Gestion de la description
-    let description: string | PropertyDescription;
+    // Gestion de la description complète
+    let description: PropertyDescription | string = '';
     
-    if (typeof apiData.description === 'string') {
-      description = apiData.description;
-    } else if (apiData.fullDescription && typeof apiData.fullDescription === 'object') {
-      description = {
-        summary: apiData.fullDescription.summary || '',
-        spaceDescription: apiData.fullDescription.spaceDescription || '',
-        guestAccess: apiData.fullDescription.guestAccess || '',
-        neighborhoodInfo: apiData.fullDescription.neighborhoodInfo || '',
-      };
-    } else if (apiData.description && typeof apiData.description === 'object') {
+    if (apiData.description && typeof apiData.description === 'object') {
       description = {
         summary: apiData.description.summary || '',
         spaceDescription: apiData.description.spaceDescription || '',
         guestAccess: apiData.description.guestAccess || '',
         neighborhoodInfo: apiData.description.neighborhoodInfo || '',
+        id: apiData.description.id,
+        bienId: apiData.description.bienId,
+        createdAt: apiData.description.createdAt ? new Date(apiData.description.createdAt) : undefined
       };
-    } else {
-      description = '';
+    } else if (typeof apiData.description === 'string') {
+      description = apiData.description;
     }
 
-    // IMAGES RÉELLES - CORRIGÉ (maintenant avec async/await)
+    // IMAGES RÉELLES
     let images: string[] = [];
+    let img: string = '';
+    
     if (apiData.images && Array.isArray(apiData.images)) {
-      // Filtre simple pour le moment - on ne peut pas convertir les blobs car ils ont expiré
       images = apiData.images
         .filter((img: any) => {
           if (typeof img !== 'string') return false;
-          
           const trimmed = img.trim();
-          // Ne pas inclure les URLs blob (elles ne sont plus valides)
+          
+          // Exclure URLs blob
           if (trimmed.startsWith('blob:')) {
-            console.log(`⚠️ URL blob ignorée: ${trimmed.substring(0, 50)}...`);
             return false;
           }
           
-          return trimmed.length > 10;
+          // Vérifier que c'est une URL valide
+          return trimmed.length > 10 && 
+                 (trimmed.startsWith('http') || 
+                  trimmed.startsWith('data:image') || 
+                  trimmed.startsWith('/'));
         })
         .map((img: string) => {
-          const trimmed = img.trim();
+          let trimmed = img.trim();
           
-          // Nettoyer les base64
+          // Nettoyer base64
           if (trimmed.startsWith('data:image')) {
-            return trimmed.replace('...[BASE64_TROP_LONG]', '');
+            trimmed = trimmed.replace('...[BASE64_TROP_LONG]', '');
           }
           
-          // Pour Cloudinary, forcer HTTPS
+          // Forcer HTTPS pour Cloudinary
           if (trimmed.includes('cloudinary.com') && trimmed.startsWith('http://')) {
-            return trimmed.replace('http://', 'https://');
+            trimmed = trimmed.replace('http://', 'https://');
           }
           
           return trimmed;
         });
-    }
-    
-    console.log(`📸 Images normalisées: ${images.length}`);
-    if (images.length > 0) {
-      console.log(`🔍 Première image: ${images[0].substring(0, 80)}...`);
+      
+      img = images[0] || '';
     }
 
-    // Normaliser le propriétaire
+    // Propriétaire avec tous les champs
     const owner = {
-      name: apiData.owner?.name || 'Propriétaire',
-      phone: apiData.owner?.phone || '',
-      email: apiData.owner?.email || '',
-      id: apiData.owner?.id
+      id: apiData.owner?.id,
+      name: apiData.owner?.name || apiData.proprietaire?.nom || 'Propriétaire',
+      phone: apiData.owner?.phone || apiData.owner?.telephone || '',
+      email: apiData.owner?.email || apiData.proprietaire?.email || '',
+      createdAt: apiData.owner?.createdAt ? new Date(apiData.owner.createdAt) : 
+                apiData.proprietaire?.createdAt ? new Date(apiData.proprietaire.createdAt) : undefined
     };
 
-    // Normaliser les équipements
-    const amenitiesDetails = apiData.amenitiesDetails || [];
-    const amenities = apiData.amenities || [];
+    // Équipements détaillés
+    const amenitiesDetails = apiData.amenitiesDetails || 
+                            apiData.equipementsDetails || 
+                            (apiData.equipements ? apiData.equipements.map((e: any) => e.equipement) : []);
+    
+    const amenities = apiData.amenities || 
+                     (amenitiesDetails ? amenitiesDetails.map((e: any) => e.nom).filter(Boolean) : []);
+
+    // Capacité calculée selon la catégorie
+    let capacity = apiData.capacity || 0;
+    if (!capacity) {
+      switch (apiData.category) {
+        case 'HOUSE':
+          capacity = apiData.maxGuests || 0;
+          break;
+        case 'OFFICE':
+          capacity = apiData.employees || 0;
+          break;
+        case 'EVENT':
+          capacity = apiData.eventCapacity || 0;
+          break;
+      }
+    }
+
+    // Type affiché
+    let displayType = apiData.type || apiData.displayType || '';
+    if (!displayType) {
+      switch (apiData.category) {
+        case 'HOUSE':
+          displayType = apiData.subType && apiData.subType !== 'house' 
+            ? apiData.subType.charAt(0).toUpperCase() + apiData.subType.slice(1)
+            : 'Maison';
+          break;
+        case 'OFFICE':
+          displayType = apiData.subType && apiData.subType !== 'office'
+            ? apiData.subType.charAt(0).toUpperCase() + apiData.subType.slice(1)
+            : 'Bureau';
+          break;
+        case 'EVENT':
+          displayType = apiData.subType && apiData.subType !== 'event'
+            ? apiData.subType.charAt(0).toUpperCase() + apiData.subType.slice(1)
+            : 'Salle événement';
+          break;
+        default:
+          displayType = apiData.subType || 'Propriété';
+      }
+    }
 
     return {
       id: apiData.id,
       title: apiData.title || '',
-      type: apiData.type || '',
+      type: displayType,
       category: apiData.category || 'HOUSE',
       subType: apiData.subType || '',
-      location: apiData.location || '',
+      privacy: apiData.privacy,
+      
+      // LocationStep
+      location: apiData.location || apiData.neighborhood || apiData.city || '',
       city: apiData.city || '',
       address: apiData.address || '',
-      price: apiData.price || 0,
+      country: apiData.country || 'Bénin',
+      postalCode: apiData.postalCode,
+      latitude: apiData.latitude,
+      longitude: apiData.longitude,
+      
+      // PriceStep
+      price: apiData.price || apiData.basePrice || 0,
       currency: apiData.currency || 'FCFA',
-      capacity: apiData.capacity || 0,
-      bedrooms: apiData.bedrooms || 0,
-      bathrooms: apiData.bathrooms || 0,
+      weeklyDiscount: apiData.weeklyDiscount || apiData.pricing?.weeklyDiscount,
+      monthlyDiscount: apiData.monthlyDiscount || apiData.pricing?.monthlyDiscount,
+      cleaningFee: apiData.cleaningFee || apiData.pricing?.cleaningFee,
+      extraGuestFee: apiData.extraGuestFee || apiData.pricing?.extraGuestFee,
+      securityDeposit: apiData.securityDeposit || apiData.pricing?.securityDeposit,
       
-      // IMAGES RÉELLES CORRIGÉES
-      images: images,
-      
-      wifi: apiData.wifi || false,
-      amenities: amenities,
-      equipementsDetails: amenitiesDetails,
-      description,
-      owner,
+      // BasicsStep - Communs
       size: apiData.size,
       floors: apiData.floors,
-      isPublished: apiData.isPublished || false,
+      capacity,
+      bedrooms: apiData.bedrooms,
+      beds: apiData.beds,
+      bathrooms: apiData.bathrooms,
+      privateEntrance: apiData.privateEntrance,
       
-      // Champs spécifiques
-      maxGuests: apiData.maxGuests,
+      // BasicsStep - Office
       employees: apiData.employees,
+      offices: apiData.offices,
+      meetingRooms: apiData.meetingRooms,
+      workstations: apiData.workstations,
+      
+      // BasicsStep - Event
       eventCapacity: apiData.eventCapacity,
       parkingSpots: apiData.parkingSpots,
-      meetingRooms: apiData.meetingRooms,
+      wheelchairAccessible: apiData.wheelchairAccessible,
+      hasStage: apiData.hasStage,
+      hasSoundSystem: apiData.hasSoundSystem,
+      hasProjector: apiData.hasProjector,
+      hasCatering: apiData.hasCatering,
+      minBookingHours: apiData.minBookingHours,
       
-      // Informations de prix
-      cleaningFee: apiData.cleaningFee,
-      extraGuestFee: apiData.extraGuestFee,
-      securityDeposit: apiData.securityDeposit,
-      weeklyDiscount: apiData.weeklyDiscount,
-      monthlyDiscount: apiData.monthlyDiscount,
+      // Images
+      images,
+      img,
       
+      // Description
+      description,
+      
+      // Propriétaire
+      owner,
+      
+      // Équipements
+      wifi: apiData.wifi || false,
+      amenities,
+      equipementsDetails: amenitiesDetails,
+      
+      // Règles
+      checkInTime: apiData.checkInTime || apiData.rules?.checkInTime || '15:00',
+      checkOutTime: apiData.checkOutTime || apiData.rules?.checkOutTime || '11:00',
+      childrenAllowed: apiData.childrenAllowed !== false,
+      
+      // Autres
+      isPublished: apiData.isPublished || false,
       createdAt: apiData.createdAt ? new Date(apiData.createdAt) : undefined,
       updatedAt: apiData.updatedAt ? new Date(apiData.updatedAt) : undefined
     };
   };
 
-  // Composant pour afficher une image avec fallback - CORRIGÉ
+  // Composant pour afficher une image avec fallback
   const PropertyImageDisplay = ({ 
     src, 
     alt, 
@@ -257,9 +372,8 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
           cleanedSrc = cleanedSrc.replace('http://', 'https://');
         }
         
-        // Ne pas essayer d'afficher les URLs blob (elles ne sont pas persistantes)
+        // Ne pas essayer d'afficher les URLs blob
         if (cleanedSrc.startsWith('blob:')) {
-          console.log(`⚠️ URL blob détectée, utilisation du placeholder pour ${alt}`);
           setImgSrc('');
           setHasError(true);
           return;
@@ -274,7 +388,6 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
     }, [src, alt]);
 
     const handleError = () => {
-      console.log(`❌ Erreur image: ${alt.substring(0, 30)}`);
       setHasError(true);
     };
 
@@ -303,7 +416,6 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
         onError={handleError}
         loading="lazy"
         crossOrigin="anonymous"
-        onLoad={() => console.log(`✅ Image chargée: ${alt.substring(0, 30)}`)}
       />
     );
   };
@@ -337,15 +449,8 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
       const response = await fetch(`/api/properties?${params.toString()}`);
       const data = await response.json();
       
-      console.log('📋 DONNÉES LISTE API:', data);
-      
       if (data.success) {
-        // Normaliser les propriétés avec await
-        const normalizedPropertiesPromises = data.data.map((property: any) => normalizePropertyData(property));
-        const normalizedProperties = await Promise.all(normalizedPropertiesPromises);
-        
-        console.log('✨ PROPRIÉTÉS NORMALISÉES:', normalizedProperties);
-        
+        const normalizedProperties = data.data.map((property: any) => normalizePropertyData(property));
         setFilteredProperties(normalizedProperties);
       } else {
         console.error('Erreur lors du chargement des propriétés:', data.error);
@@ -359,26 +464,11 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
 
   const fetchPropertyDetails = async (id: number) => {
     try {
-      console.log(`🔍 Chargement des détails pour l'ID: ${id}`);
-      console.log(`🔗 URL: /api/properties/${id}`);
-      
       const response = await fetch(`/api/properties/${id}`);
-      console.log(`📊 Statut de la réponse: ${response.status}`);
-      
       const data = await response.json();
-      console.log('📦 DONNÉES DÉTAILS API:', data);
       
       if (data.success) {
-        const normalizedProperty = await normalizePropertyData(data.data);
-        console.log('✨ DONNÉES DÉTAILS NORMALISÉES:', normalizedProperty);
-        console.log('📸 Images réelles:', normalizedProperty.images);
-        console.log('🔢 Nombre d\'images:', normalizedProperty.images.length);
-        
-        // Afficher chaque URL d'image
-        normalizedProperty.images.forEach((img, index) => {
-          console.log(`   Image ${index + 1}: ${img.substring(0, 100)}${img.length > 100 ? '...' : ''}`);
-        });
-        
+        const normalizedProperty = normalizePropertyData(data.data);
         setSelectedProperty(normalizedProperty);
         setCurrentImageIndex(0);
         document.body.style.overflow = 'hidden';
@@ -388,7 +478,6 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
       }
     } catch (error: any) {
       console.error('Erreur réseau:', error);
-      console.error('Stack:', error.stack);
       alert('Erreur réseau lors du chargement des détails');
     }
   };
@@ -398,8 +487,6 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
   };
 
   const handlePropertyClick = (property: Property): void => {
-    console.log('🎯 Propriété cliquée:', property);
-    console.log('📸 Images réelles:', property.images);
     fetchPropertyDetails(property.id);
   };
 
@@ -553,6 +640,62 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
       case "EVENT": return "Salle événement";
       default: return subType || "Propriété";
     }
+  };
+
+  // Rendu d'un badge d'icône pour les équipements
+  const renderAmenityBadge = (amenity: string) => {
+    const lowerAmenity = amenity.toLowerCase();
+    
+    // Mapping des icônes avec lucide-react
+    if (lowerAmenity.includes('wifi') || lowerAmenity.includes('internet')) {
+      return <Wifi className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('piscine') || lowerAmenity.includes('pool')) {
+      return <Droplets className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('parking') || lowerAmenity.includes('garage')) {
+      return <ParkingCircle className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('climatisation') || lowerAmenity.includes('air')) {
+      return <Wind className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('cuisine') || lowerAmenity.includes('kitchen')) {
+      return <Microwave className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('tv') || lowerAmenity.includes('télé') || lowerAmenity.includes('television')) {
+      return <Cable className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('sono') || lowerAmenity.includes('sound') || lowerAmenity.includes('musique')) {
+      return <Music className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('projecteur') || lowerAmenity.includes('projector')) {
+      return <Presentation className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('catering') || lowerAmenity.includes('restauration') || lowerAmenity.includes('repas')) {
+      return <Utensils className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('pmr') || lowerAmenity.includes('handicapé') || lowerAmenity.includes('accessibilité')) {
+      return <Accessibility className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('réception') || lowerAmenity.includes('accueil')) {
+      return <Bell className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('sécurité') || lowerAmenity.includes('security')) {
+      return <Shield className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('entrée') || lowerAmenity.includes('entrance')) {
+      return <DoorOpen className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('surface') || lowerAmenity.includes('m²') || lowerAmenity.includes('mètre')) {
+      return <Square className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('bureau') || lowerAmenity.includes('office')) {
+      return <Briefcase className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('réunion') || lowerAmenity.includes('meeting')) {
+      return <Printer className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('salle') || lowerAmenity.includes('room')) {
+      return <Sofa className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('bar') || lowerAmenity.includes('boisson')) {
+      return <GlassWater className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('fitness') || lowerAmenity.includes('sport')) {
+      return <Dumbbell className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('jardin') || lowerAmenity.includes('garden')) {
+      return <Trees className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('balcon') || lowerAmenity.includes('terrasse')) {
+      return <Home className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('douche') || lowerAmenity.includes('shower')) {
+      return <Bath className="w-3 h-3" />;
+    } else if (lowerAmenity.includes('lit') || lowerAmenity.includes('bed')) {
+      return <Bed className="w-3 h-3" />;
+    }
+    
+    return null;
   };
 
   return (
@@ -843,7 +986,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                   }}
                   aria-label={`Voir ${property.title} à ${property.location}`}
                 >
-                  {/* Image - UTILISER L'IMAGE RÉELLE */}
+                  {/* Image */}
                   <div className="relative aspect-video overflow-hidden bg-gray-200">
                     <PropertyImageDisplay
                       src={property.images && property.images.length > 0 ? property.images[0] : ''}
@@ -852,7 +995,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                       propertyId={property.id}
                     />
                     <div className="absolute top-3 right-3 bg-white/90 px-2 py-1 rounded text-xs font-semibold">
-                      {formatPropertyType(property.category, property.subType)}
+                      {property.type}
                     </div>
                   </div>
                   
@@ -861,6 +1004,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                     {/* Titre et localisation */}
                     <h3 className="font-bold text-gray-900 text-lg mb-1 line-clamp-1">{property.title}</h3>
                     <p className="text-gray-600 text-sm mb-3 line-clamp-1">
+                      <MapPin className="w-3 h-3 inline mr-1" />
                       {property.location}, {property.city}
                     </p>
                     
@@ -872,13 +1016,13 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                             <Users className="w-4 h-4" />
                             <span>{property.capacity} pers.</span>
                           </div>
-                          {property.bedrooms > 0 && (
+                          {property.bedrooms && property.bedrooms > 0 && (
                             <div className="flex items-center gap-1">
                               <Bed className="w-4 h-4" />
                               <span>{property.bedrooms} ch.</span>
                             </div>
                           )}
-                          {property.bathrooms > 0 && (
+                          {property.bathrooms && property.bathrooms > 0 && (
                             <div className="flex items-center gap-1">
                               <Bath className="w-4 h-4" />
                               <span>{property.bathrooms} sdb</span>
@@ -889,7 +1033,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                       
                       {property.category === "OFFICE" && (
                         <div className="flex items-center gap-1">
-                          <Users className="w-4 h-4" />
+                          <Building className="w-4 h-4" />
                           <span>Capacité: {property.capacity} pers.</span>
                         </div>
                       )}
@@ -900,9 +1044,16 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                           <span>Jusqu&apos;à {property.capacity} pers.</span>
                         </div>
                       )}
+                      
+                      {property.size && (
+                        <div className="flex items-center gap-1">
+                          <Maximize className="w-4 h-4" />
+                          <span>{property.size} m²</span>
+                        </div>
+                      )}
                     </div>
                     
-                    {/* WiFi et équipements */}
+                    {/* Équipements */}
                     <div className="flex flex-wrap gap-1 sm:gap-2 mb-4">
                       {property.wifi && (
                         <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
@@ -911,16 +1062,17 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                         </div>
                       )}
                       
-                      {property.amenities.slice(0, 2).map((amenity, index) => (
-                        <div key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                      {property.amenities.slice(0, 3).map((amenity, index) => (
+                        <div key={index} className="flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                          {renderAmenityBadge(amenity)}
                           <span className="hidden sm:inline">{amenity}</span>
-                          <span className="sm:hidden">{amenity.length > 10 ? `${amenity.substring(0, 10)}...` : amenity}</span>
+                          <span className="sm:hidden">{amenity.length > 8 ? `${amenity.substring(0, 8)}...` : amenity}</span>
                         </div>
                       ))}
                       
-                      {property.amenities.length > 2 && (
+                      {property.amenities.length > 3 && (
                         <div className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                          +{property.amenities.length - 2}
+                          +{property.amenities.length - 3}
                         </div>
                       )}
                     </div>
@@ -936,11 +1088,11 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                       
                       <button 
                         onClick={(e) => handleQuickWhatsApp(property, e)}
-                        className="text-brand font-semibold text-sm hover:text-brand-dark transition-colors px-3 py-1 rounded-lg bg-brand/5 hover:bg-brand/10"
+                        className="text-brand font-semibold text-sm hover:text-brand-dark transition-colors px-3 py-1 rounded-lg bg-brand/5 hover:bg-brand/10 flex items-center gap-1"
                         aria-label={`Contacter ${property.owner.name} pour ${property.title}`}
                       >
-                        <span className="hidden sm:inline">Contacter →</span>
-                        <span className="sm:hidden">→</span>
+                        <Phone className="w-3 h-3" />
+                        <span className="hidden sm:inline">Contacter</span>
                       </button>
                     </div>
                   </div>
@@ -974,20 +1126,6 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
           </>
         )}
       </div>
-
-      {/* Floating Map Button (Mobile/Tablet) */}
-      {isSearching && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 md:hidden z-40">
-          <button 
-            onClick={handleShowAllProperties}
-            className="bg-brand text-white px-6 py-3 rounded-full font-semibold shadow-xl flex items-center gap-2 hover:bg-brand-dark transition-transform"
-            aria-label="Voir toutes les propriétés"
-          >
-            <SearchIcon className="w-4 h-4" />
-            Voir tout
-          </button>
-        </div>
-      )}
 
       {/* Modale pour afficher les détails du profil */}
       <AnimatePresence>
@@ -1031,7 +1169,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
               
               {/* Contenu scrollable */}
               <div className="flex-1 overflow-y-auto">
-                {/* Galerie d'images RÉELLES */}
+                {/* Galerie d'images */}
                 {propertyImages.length > 0 ? (
                   <div className="relative aspect-video bg-gray-200 overflow-hidden">
                     <PropertyImageDisplay
@@ -1098,11 +1236,17 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                       {selectedProperty.title}
                     </h1>
                     <div className="flex items-center gap-2 text-gray-600">
-                      <Map className="w-4 h-4 md:w-5 md:h-5" />
+                      <MapPin className="w-4 h-4 md:w-5 md:h-5" />
                       <span className="text-base md:text-lg">
                         {selectedProperty.location}, {selectedProperty.city}
+                        {selectedProperty.country && `, ${selectedProperty.country}`}
                       </span>
                     </div>
+                    {selectedProperty.address && (
+                      <p className="text-gray-500 text-sm md:text-base mt-1">
+                        {selectedProperty.address}
+                      </p>
+                    )}
                   </div>
                   
                   {/* Prix et réservation */}
@@ -1135,7 +1279,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                       <div className="text-base md:text-lg font-bold">{selectedProperty.capacity} pers.</div>
                     </div>
                     
-                    {selectedProperty.bedrooms > 0 && (
+                    {selectedProperty.bedrooms && selectedProperty.bedrooms > 0 && (
                       <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
                         <Bed className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
                         <div className="text-xs md:text-sm text-gray-600">Chambres</div>
@@ -1143,18 +1287,59 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                       </div>
                     )}
                     
-                    {selectedProperty.bathrooms > 0 && (
+                    {selectedProperty.bathrooms && selectedProperty.bathrooms > 0 && (
                       <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
                         <Bath className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
                         <div className="text-xs md:text-sm text-gray-600">Salles de bain</div>
                         <div className="text-base md:text-lg font-bold">{selectedProperty.bathrooms}</div>
                       </div>
                     )}
+                    
+                    {selectedProperty.size && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
+                        <Maximize className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
+                        <div className="text-xs md:text-sm text-gray-600">Surface</div>
+                        <div className="text-base md:text-lg font-bold">{selectedProperty.size} m²</div>
+                      </div>
+                    )}
+                    
+                    {selectedProperty.floors !== undefined && selectedProperty.floors !== null && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
+                        <Building className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
+                        <div className="text-xs md:text-sm text-gray-600">Étages</div>
+                        <div className="text-base md:text-lg font-bold">{selectedProperty.floors}</div>
+                      </div>
+                    )}
+                    
+                    {selectedProperty.parkingSpots && selectedProperty.parkingSpots > 0 && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
+                        <Car className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
+                        <div className="text-xs md:text-sm text-gray-600">Parking</div>
+                        <div className="text-base md:text-lg font-bold">{selectedProperty.parkingSpots} places</div>
+                      </div>
+                    )}
+                    
+                    {selectedProperty.wheelchairAccessible && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
+                        <Accessibility className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
+                        <div className="text-xs md:text-sm text-gray-600">PMR</div>
+                        <div className="text-base md:text-lg font-bold text-green-600">Oui</div>
+                      </div>
+                    )}
+                    
+                    {selectedProperty.wifi && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
+                        <Wifi className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
+                        <div className="text-xs md:text-sm text-gray-600">WiFi</div>
+                        <div className="text-base md:text-lg font-bold text-green-600">Oui</div>
+                      </div>
+                    )}
                   </div>
+                  
+                   
                   
                   {/* Description */}
                   <div className="mb-6">
-                    <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4">Description</h3>
                     {typeof selectedProperty.description === 'string' ? (
                       <p className="text-gray-700 leading-relaxed text-sm md:text-base">
                         {selectedProperty.description}
@@ -1163,7 +1348,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                       <>
                         {selectedProperty.description.summary && (
                           <>
-                            <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">Résumé</h4>
+                            <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">Description</h4>
                             <p className="text-gray-700 leading-relaxed mb-3 md:mb-4 text-sm md:text-base">
                               {selectedProperty.description.summary}
                             </p>
@@ -1246,11 +1431,16 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                         <div className="text-gray-700 text-xs md:text-sm mt-0.5 truncate">
                           Contact : {selectedProperty.owner.phone}
                         </div>
+                        {selectedProperty.owner.email && (
+                          <div className="text-gray-700 text-xs md:text-sm mt-0.5 truncate">
+                            Email : {selectedProperty.owner.email}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                   
-                  {/* Bouton de réservation principal (sticky sur mobile) */}
+                  {/* Bouton de réservation principal */}
                   <div className="sticky bottom-0 bg-white pt-3 pb-3 md:pt-4 md:pb-4 border-t border-gray-200 -mx-4 md:-mx-6 px-4 md:px-6">
                     <button 
                       onClick={(e) => handleWhatsAppReservation(selectedProperty, e)}
@@ -1263,7 +1453,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                 </div>
               </div>
               
-              {/* Bouton de fermeture mobile (alternative) */}
+              {/* Bouton de fermeture mobile */}
               <div className="md:hidden p-4 border-t border-gray-200 bg-white">
                 <button
                   onClick={handleCloseModal}

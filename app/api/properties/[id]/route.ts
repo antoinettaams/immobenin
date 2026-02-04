@@ -1,122 +1,149 @@
-// app/api/properties/[id]/route.ts - VERSION FINALE CORRIGÉE
-import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma' // ✅ Déjà initialisé, PAS BESOIN de new PrismaClient()
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-type RouteContext = {
-  params: Promise<{ id: string }>
-}
-
 export async function GET(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const params = await context.params
-    const idString = params.id
-    const id = parseInt(idString)
+    // DÉBALLER LA PROMISE params AVEC await
+    const { id } = await params;
+    const propertyId = parseInt(id);
     
-    if (isNaN(id)) {
+    if (isNaN(propertyId)) {
       return NextResponse.json(
         { success: false, error: 'ID invalide' },
         { status: 400 }
-      )
+      );
     }
 
-    console.log(`🔍 Recherche du bien ${id}...`);
-    
+    console.log(`🔍 Récupération bien ID: ${propertyId}`);
+
+    // REQUÊTE COMPLÈTE avec TOUS les champs SANS select restrictif
     const property = await prisma.bien.findUnique({
-      where: { id: id },
+      where: { 
+        id: propertyId,
+        isPublished: true 
+      },
       include: {
+        description: true,
+        proprietaire: true,
         equipements: {
           include: {
-            equipement: {
-              select: {
-                id: true,
-                nom: true,
-                code: true,
-                categorie: true,
-                description: true,
-                pourMaison: true,
-                pourBureau: true,
-                pourEvenement: true,
-              }
-            }
+            equipement: true
           }
-        },
-        proprietaire: {
-          select: {
-            id: true,
-            nom: true,
-            telephone: true,
-            email: true,
-          },
-        },
-        description: true,
-      },
-    })
+        }
+      }
+    });
 
     if (!property) {
       return NextResponse.json(
         { success: false, error: 'Propriété non trouvée' },
         { status: 404 }
-      )
+      );
     }
 
-    console.log(`✅ Bien ${id} trouvé: ${property.title}`);
-    console.log(`📊 Images stockées: ${property.images?.length || 0}`);
+    console.log(`✅ Bien trouvé: ${property.title}`);
+    console.log('📋 Champs disponibles:');
+    console.log('  • maxGuests:', property.maxGuests);
+    console.log('  • employees:', property.employees);
+    console.log('  • eventCapacity:', property.eventCapacity);
+    console.log('  • bedrooms:', property.bedrooms);
+    console.log('  • beds:', property.beds);
+    console.log('  • bathrooms:', property.bathrooms);
+    console.log('  • floors:', property.floors);
+    console.log('  • size:', property.size);
+    console.log('  • privateEntrance:', property.privateEntrance);
+    console.log('  • offices:', property.offices);
+    console.log('  • meetingRooms:', property.meetingRooms);
+    console.log('  • workstations:', property.workstations);
+    console.log('  • parkingSpots:', property.parkingSpots);
+    console.log('  • wheelchairAccessible:', property.wheelchairAccessible);
+    console.log('  • hasStage:', property.hasStage);
+    console.log('  • hasSoundSystem:', property.hasSoundSystem);
+    console.log('  • hasProjector:', property.hasProjector);
+    console.log('  • hasCatering:', property.hasCatering);
+    console.log('  • minBookingHours:', property.minBookingHours);
 
-    // Vérifier le type du champ images
-    let rawImages: any[] = [];
-    
-    if (Array.isArray(property.images)) {
-      rawImages = property.images;
-    } else if (typeof property.images === 'string') {
-      try {
-        rawImages = JSON.parse(property.images);
-      } catch (e) {
-        rawImages = [property.images];
-      }
+    // Déterminer la capacité selon la catégorie
+    let capacity = 0;
+    if (property.category === 'HOUSE') {
+      capacity = property.maxGuests || 0;
+    } else if (property.category === 'OFFICE') {
+      capacity = property.employees || 0;
+    } else if (property.category === 'EVENT') {
+      capacity = property.eventCapacity || 0;
     }
 
-    console.log(`🔍 Images brutes (type: ${typeof property.images}):`, rawImages.length);
+    // Extraire les équipements
+    const amenities = property.equipements
+      .map(e => e.equipement?.nom)
+      .filter((nom): nom is string => !!nom);
     
-    // CORRECTION DES IMAGES - Filtrer et nettoyer
-    const cleanImages = rawImages
+    const hasWifi = amenities.some(amenity => 
+      amenity.toLowerCase().includes('wifi') || 
+      amenity.toLowerCase().includes('internet')
+    );
+
+    // Format display type
+    let displayType = '';
+    switch (property.category) {
+      case 'HOUSE':
+        displayType = property.subType && property.subType !== 'house' 
+          ? property.subType.charAt(0).toUpperCase() + property.subType.slice(1)
+          : 'Maison';
+        break;
+      case 'OFFICE':
+        displayType = property.subType && property.subType !== 'office'
+          ? property.subType.charAt(0).toUpperCase() + property.subType.slice(1)
+          : 'Bureau';
+        break;
+      case 'EVENT':
+        displayType = property.subType && property.subType !== 'event'
+          ? property.subType.charAt(0).toUpperCase() + property.subType.slice(1)
+          : 'Salle événement';
+        break;
+      default:
+        displayType = property.subType || 'Propriété';
+    }
+
+    // NETTOYAGE DES IMAGES
+    const cleanImages = (property.images || [])
       .filter((img: any) => {
         if (!img || typeof img !== 'string') {
-          console.warn(`⚠️ Image non-string ignorée:`, img);
           return false;
         }
         
         const trimmed = img.trim();
         
-        // Exclure les URLs blob (non persistantes)
+        // Exclure URLs blob (temporaires)
         if (trimmed.startsWith('blob:')) {
-          console.warn(`⚠️ URL blob ignorée: ${trimmed.substring(0, 50)}...`);
           return false;
         }
         
-        // Vérifier la longueur minimale
-        const isValid = trimmed.length > 10;
-        if (!isValid) {
-          console.warn(`⚠️ URL trop courte ignorée: ${trimmed.substring(0, 30)}...`);
+        // Vérifier longueur minimale
+        if (trimmed.length < 10) {
+          return false;
         }
-        return isValid;
+        
+        return true;
       })
       .map((img: string) => {
         const trimmed = img.trim();
         
-        // Nettoyer les URLs Cloudinary
+        // Nettoyer URLs Cloudinary
         if (trimmed.includes('cloudinary.com')) {
-          // S'assurer d'avoir HTTPS
-          let cleanUrl = trimmed.startsWith('http://') 
-            ? trimmed.replace('http://', 'https://')
-            : trimmed;
+          let cleanUrl = trimmed;
           
-          // Ajouter l'optimisation si pas déjà présente
+          // Forcer HTTPS
+          if (cleanUrl.startsWith('http://')) {
+            cleanUrl = cleanUrl.replace('http://', 'https://');
+          }
+          
+          // Ajouter optimisation d'image
           if (!cleanUrl.includes('/upload/q_auto,f_auto/') && cleanUrl.includes('/upload/')) {
             cleanUrl = cleanUrl.replace('/upload/', '/upload/q_auto,f_auto/');
           }
@@ -124,51 +151,18 @@ export async function GET(
           return cleanUrl;
         }
         
-        // Garder les base64 tels quels
-        if (trimmed.startsWith('data:image')) {
-          return trimmed;
-        }
-        
         return trimmed;
       })
       .filter((img: string) => img && img.length > 0);
 
-    console.log(`🎯 Images nettoyées: ${cleanImages.length}`);
-    if (cleanImages.length > 0) {
-      console.log(`   Première image: ${cleanImages[0].substring(0, 70)}...`);
-    }
-
-    // Si pas d'images, ajouter un placeholder
+    // Assurer au moins une image
     const images = cleanImages.length > 0 
       ? cleanImages 
       : ['https://via.placeholder.com/800x600/cccccc/969696?text=Immobilier+B%C3%A9nin'];
 
-    // Formatage de la réponse
-    let capacity = 0;
-    let capacityDescription = "";
-    
-    if (property.category === 'HOUSE') {
-      capacity = property.maxGuests || 0;
-      capacityDescription = `${capacity} voyageurs maximum`;
-    } else if (property.category === 'OFFICE') {
-      capacity = property.employees || property.workstations || 0;
-      capacityDescription = `${capacity} personnes`;
-    } else if (property.category === 'EVENT') {
-      capacity = property.eventCapacity || 0;
-      capacityDescription = `${capacity} personnes`;
-    }
-
-    const amenities = property.equipements
-      .map(e => e.equipement?.nom)
-      .filter((nom): nom is string => !!nom);
-
-    const displayType = property.subType || 
-      (property.category === 'HOUSE' ? 'Maison' : 
-       property.category === 'OFFICE' ? 'Bureau' : 
-       'Salle événement');
-
+    // FORMATTER LA RÉPONSE COMPLÈTE
     const formattedProperty = {
-      // Informations de base
+      // === Informations de base ===
       id: property.id,
       title: property.title || `${displayType} à ${property.city}`,
       type: displayType,
@@ -176,113 +170,133 @@ export async function GET(
       subType: property.subType,
       privacy: property.privacy,
       
-      // Localisation
+      // === LocationStep ===
       location: property.neighborhood || property.city,
       city: property.city,
-      address: property.address,
       neighborhood: property.neighborhood,
+      address: property.address,
+      country: property.country || 'Bénin',
       postalCode: property.postalCode,
-      country: property.country || "Bénin",
       latitude: property.latitude,
       longitude: property.longitude,
-      locationDetails: `${property.address}, ${property.neighborhood ? property.neighborhood + ', ' : ''}${property.city}`,
       
-      // Prix
+      // === BasicsStep ===
+      // Champs communs
+      size: property.size,
+      floors: property.floors,
+      
+      // Champs maison
+      maxGuests: property.maxGuests,
+      bedrooms: property.bedrooms,
+      beds: property.beds,
+      bathrooms: property.bathrooms,
+      privateEntrance: property.privateEntrance || false,
+      
+      // Champs bureau
+      employees: property.employees,
+      offices: property.offices,
+      meetingRooms: property.meetingRooms,
+      workstations: property.workstations,
+      
+      // Champs événement
+      eventCapacity: property.eventCapacity,
+      parkingSpots: property.parkingSpots,
+      wheelchairAccessible: property.wheelchairAccessible || false,
+      hasStage: property.hasStage || false,
+      hasSoundSystem: property.hasSoundSystem || false,
+      hasProjector: property.hasProjector || false,
+      hasCatering: property.hasCatering || false,
+      minBookingHours: property.minBookingHours,
+      
+      // === PriceStep ===
       price: property.basePrice || 0,
-      currency: property.currency || "FCFA",
+      currency: property.currency || 'FCFA',
       weeklyDiscount: property.weeklyDiscount || 0,
       monthlyDiscount: property.monthlyDiscount || 0,
       cleaningFee: property.cleaningFee || 0,
       extraGuestFee: property.extraGuestFee || 0,
       securityDeposit: property.securityDeposit || 0,
-      priceDescription: `${(property.basePrice || 0).toLocaleString("fr-FR")} ${property.currency || 'FCFA'} / ${property.category === 'OFFICE' ? 'mois' : 'nuit'}`,
       
-      // Caractéristiques
-      capacity: capacity,
-      capacityDescription: capacityDescription,
-      bedrooms: property.bedrooms || 0,
-      beds: property.beds || 0,
-      bathrooms: property.bathrooms || 0,
-      size: property.size,
-      floors: property.floors,
+      // === Rules ===
+      checkInTime: property.checkInTime || '15:00',
+      checkOutTime: property.checkOutTime || '11:00',
+      childrenAllowed: property.childrenAllowed !== false,
       
-      // IMAGES CORRIGÉES
+      // === Images ===
       img: images[0] || '',
       images: images,
       
-      // Équipements
+      // === DescriptionStep ===
+      description: property.description ? {
+        summary: property.description.summary || '',
+        spaceDescription: property.description.spaceDescription || '',
+        guestAccess: property.description.guestAccess || '',
+        neighborhood: property.description.neighborhoodInfo || '',
+        createdAt: property.description.createdAt?.toISOString(),
+      } : null,
+      
+      // === AmenitiesStep ===
+      wifi: hasWifi,
       amenities: amenities,
-      hasWifi: amenities.some(a => 
-        a.toLowerCase().includes('wifi') || 
-        a.toLowerCase().includes('internet')
-      ),
-      hasPool: amenities.some(a => a.toLowerCase().includes('piscine')),
-      hasAirConditioning: amenities.some(a => 
-        a.toLowerCase().includes('climatisation') ||
-        a.toLowerCase().includes('air condition')
-      ),
-      hasParking: amenities.some(a => 
-        a.toLowerCase().includes('parking') ||
-        a.toLowerCase().includes('garage')
-      ),
+      amenitiesDetails: property.equipements.map(e => ({
+        id: e.equipement.id,
+        code: e.equipement.code,
+        nom: e.equipement.nom,
+        description: e.equipement.description,
+        categorie: e.equipement.categorie,
+        pourMaison: e.equipement.pourMaison,
+        pourBureau: e.equipement.pourBureau,
+        pourEvenement: e.equipement.pourEvenement,
+      })),
       
-      // Description
-      description: property.description?.summary || '',
-      fullDescription: {
-        summary: property.description?.summary || '',
-        spaceDescription: property.description?.spaceDescription || '',
-        guestAccess: property.description?.guestAccess || '',
-        neighborhoodInfo: property.description?.neighborhoodInfo || 
-          (property.neighborhood ? `Quartier ${property.neighborhood} à ${property.city}` : `À ${property.city}`)
-      },
-      
-      // Règles
-      rules: {
-        checkInTime: property.checkInTime || '14:00',
-        checkOutTime: property.checkOutTime || '12:00',
-        childrenAllowed: property.childrenAllowed ?? true,
-        checkInDescription: `Arrivée à partir de ${property.checkInTime || '14:00'}`,
-        checkOutDescription: `Départ avant ${property.checkOutTime || '12:00'}`
-      },
-      
-      // Propriétaire
+      // === Propriétaire (Utilisateur) ===
       owner: {
         id: property.proprietaire.id,
         name: property.proprietaire.nom,
         phone: property.proprietaire.telephone,
         email: property.proprietaire.email,
-        contactInfo: `Propriétaire: ${property.proprietaire.nom}`
+        createdAt: property.proprietaire.createdAt?.toISOString(),
       },
       
-      // Métadonnées
+      // === Features calculées ===
+      capacity: capacity,
+      features: {
+        hasPool: amenities.some(a => a.toLowerCase().includes('piscine')),
+        hasAirConditioning: amenities.some(a => a.toLowerCase().includes('climatisation')),
+        hasParking: amenities.some(a => a.toLowerCase().includes('parking')),
+        hasKitchen: amenities.some(a => a.toLowerCase().includes('cuisine')),
+        hasTerrace: amenities.some(a => a.toLowerCase().includes('terrasse') || a.toLowerCase().includes('balcon')),
+      },
+      
+      // === Métadonnées ===
       isPublished: property.isPublished,
       createdAt: property.createdAt.toISOString(),
       updatedAt: property.updatedAt.toISOString(),
       
-      // Champs spécifiques
-      ...(property.category === 'HOUSE' && {
-        maxGuests: property.maxGuests,
-        privateEntrance: property.privateEntrance || false
-      }),
-      ...(property.category === 'OFFICE' && {
-        employees: property.employees,
-        offices: property.offices,
-        meetingRooms: property.meetingRooms,
-        workstations: property.workstations
-      }),
-      ...(property.category === 'EVENT' && {
-        eventCapacity: property.eventCapacity,
-        parkingSpots: property.parkingSpots,
-        wheelchairAccessible: property.wheelchairAccessible || false,
-        hasStage: property.hasStage || false,
-        hasSoundSystem: property.hasSoundSystem || false,
-        hasProjector: property.hasProjector || false,
-        minBookingHours: property.minBookingHours
-      })
+      // === Groupement pour compatibilité ===
+      rules: {
+        checkInTime: property.checkInTime || '15:00',
+        checkOutTime: property.checkOutTime || '11:00',
+        childrenAllowed: property.childrenAllowed !== false,
+      },
+      
+      pricing: {
+        basePrice: property.basePrice || 0,
+        currency: property.currency || 'FCFA',
+        weeklyDiscount: property.weeklyDiscount || 0,
+        monthlyDiscount: property.monthlyDiscount || 0,
+        cleaningFee: property.cleaningFee || 0,
+        extraGuestFee: property.extraGuestFee || 0,
+        securityDeposit: property.securityDeposit || 0,
+      },
     };
 
-    console.log(`✅ Réponse préparée pour le bien ${id}`);
-    console.log(`📊 Images envoyées: ${formattedProperty.images.length}`);
+    console.log(`✅ Propriété ${propertyId} formatée avec succès`);
+    console.log(`📸 Images: ${images.length}`);
+    console.log(`🏠 Chambres: ${property.bedrooms}`);
+    console.log(`🛏️ Lits: ${property.beds}`);
+    console.log(`🚿 Salles de bain: ${property.bathrooms}`);
+    console.log(`📦 Taille de la réponse: ${JSON.stringify(formattedProperty).length} caractères`);
 
     return NextResponse.json({
       success: true,
@@ -290,12 +304,113 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('❌ Erreur API property details:', error)
+    console.error('❌ Erreur lors de la récupération de la propriété:', error);
+    console.error('Stack trace:', error.stack);
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Erreur serveur lors de la récupération de la propriété',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// OPTIONNEL: Endpoint PUT pour mettre à jour
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    // DÉBALLER LA PROMISE params
+    const { id } = await params;
+    const propertyId = parseInt(id);
+    const body = await request.json();
+    
+    if (isNaN(propertyId)) {
+      return NextResponse.json(
+        { success: false, error: 'ID invalide' },
+        { status: 400 }
+      );
+    }
+    
+    const updatedProperty = await prisma.bien.update({
+      where: { id: propertyId },
+      data: {
+        title: body.title,
+        basePrice: body.price,
+        isPublished: body.isPublished,
+        // Mettre à jour d'autres champs selon besoin
+        city: body.city,
+        address: body.address,
+        size: body.size,
+        bedrooms: body.bedrooms,
+        bathrooms: body.bathrooms,
+        maxGuests: body.maxGuests,
+        employees: body.employees,
+        eventCapacity: body.eventCapacity,
+        // ... autres champs
+      }
+    });
     
     return NextResponse.json({
-      success: false,
-      error: 'Erreur lors de la récupération du bien',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    }, { status: 500 })
+      success: true,
+      message: 'Propriété mise à jour',
+      data: { id: updatedProperty.id }
+    });
+    
+  } catch (error: any) {
+    console.error('❌ Erreur mise à jour propriété:', error);
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Erreur lors de la mise à jour',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// OPTIONNEL: Endpoint DELETE pour supprimer
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    // DÉBALLER LA PROMISE params
+    const { id } = await params;
+    const propertyId = parseInt(id);
+    
+    if (isNaN(propertyId)) {
+      return NextResponse.json(
+        { success: false, error: 'ID invalide' },
+        { status: 400 }
+      );
+    }
+    
+    await prisma.bien.delete({
+      where: { id: propertyId }
+    });
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Propriété supprimée'
+    });
+    
+  } catch (error: any) {
+    console.error('❌ Erreur suppression propriété:', error);
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Erreur lors de la suppression',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
+      { status: 500 }
+    );
   }
 }

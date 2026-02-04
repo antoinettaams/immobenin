@@ -87,7 +87,7 @@ export const Footer: React.FC = () => {
             <p className="text-gray-400 text-sm md:text-base mb-4 md:mb-6">
               La plateforme de référence pour la location d&apos;espaces au Bénin. Simple, sécurisé, local.
             </p>
-            <div className="flex  sm:justify-start gap-3 md:gap-4">
+            <div className="flex sm:justify-start gap-3 md:gap-4">
               <a 
                 href="https://www.facebook.com/profile.php?id=61587104714306" 
                 target="_blank" 
@@ -118,15 +118,15 @@ export const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* Liens rapides - VERSION CORRIGÉE */}
+          {/* Liens rapides */}
           <div className="sm:text-left">
             <h4 className="font-bold text-lg mb-4 md:mb-6">Liens rapides</h4>
-            <ul className="space-y-2 md:space-y-4 text-gray-400">
+            <ul className="space-y-2 md:space-y-3 text-gray-400">
               <li>
                 <Link 
                   href="/" 
                   onClick={scrollToTop}
-                  className="hover:text-white transition-colors inline-block text-sm md:text-base"
+                  className="hover:text-white transition-colors inline-flex items-center gap-2 text-sm md:text-base"
                   aria-label="Accueil"
                 >
                   Accueil
@@ -136,7 +136,7 @@ export const Footer: React.FC = () => {
                 <Link 
                   href="/search" 
                   onClick={scrollToTop}
-                  className="hover:text-white transition-colors inline-block text-sm md:text-base"
+                  className="hover:text-white transition-colors inline-flex items-center gap-2 text-sm md:text-base"
                   aria-label="Rechercher un bien"
                 >
                   Rechercher
@@ -146,7 +146,7 @@ export const Footer: React.FC = () => {
                 <Link 
                   href="/publish" 
                   onClick={scrollToTop}
-                  className="hover:text-white transition-colors inline-block text-sm md:text-base"
+                  className="hover:text-white transition-colors inline-flex items-center gap-2 text-sm md:text-base"
                   aria-label="Devenir hôte"
                 >
                   Devenir hôte
@@ -156,7 +156,7 @@ export const Footer: React.FC = () => {
                 <Link 
                   href="/contact" 
                   onClick={scrollToTop}
-                  className="hover:text-white transition-colors inline-block text-sm md:text-base"
+                  className="hover:text-white transition-colors inline-flex items-center gap-2 text-sm md:text-base"
                   aria-label="Contact"
                 >
                   Contact
@@ -165,15 +165,15 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Support - VERSION CORRIGÉE */}
+          {/* Support */}
           <div className="sm:text-left">
             <h4 className="font-bold text-lg mb-4 md:mb-6">Support</h4>
-            <ul className="space-y-2 md:space-y-4 text-gray-400">
+            <ul className="space-y-2 md:space-y-3 text-gray-400">
               <li>
                 <Link 
                   href="/contact" 
                   onClick={scrollToTop}
-                  className="hover:text-white transition-colors inline-block text-sm md:text-base"
+                  className="hover:text-white transition-colors inline-flex items-center gap-2 text-sm md:text-base"
                   aria-label="Centre d'aide"
                 >
                   Centre d&apos;aide
@@ -183,7 +183,7 @@ export const Footer: React.FC = () => {
                 <Link 
                   href="/faq" 
                   onClick={scrollToTop}
-                  className="hover:text-white transition-colors inline-block text-sm md:text-base"
+                  className="hover:text-white transition-colors inline-flex items-center gap-2 text-sm md:text-base"
                   aria-label="Questions fréquentes"
                 >
                   FAQ
@@ -193,7 +193,7 @@ export const Footer: React.FC = () => {
                 <Link 
                   href="/contact" 
                   onClick={scrollToTop}
-                  className="hover:text-white transition-colors inline-block text-sm md:text-base"
+                  className="hover:text-white transition-colors inline-flex items-center gap-2 text-sm md:text-base"
                   aria-label="Signaler un problème"
                 >
                   Signaler un problème
@@ -205,9 +205,9 @@ export const Footer: React.FC = () => {
           {/* Contact */}
           <div className="sm:text-left">
             <h4 className="font-bold text-lg mb-4 md:mb-6">Contact</h4>
-            <ul className="space-y-2 md:space-y-4 text-gray-400">
-              <li className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                <Mail className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+            <ul className="space-y-3 md:space-y-4 text-gray-400">
+              <li className="flex items-start gap-3">
+                <Mail className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <a 
                   href="mailto:immobenin@gmail.com" 
                   className="hover:text-white transition-colors text-sm md:text-base break-all"
@@ -216,8 +216,8 @@ export const Footer: React.FC = () => {
                   immobenin08@gmail.com
                 </a>
               </li>
-              <li className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                <Phone className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+              <li className="flex items-start gap-3">
+                <Phone className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <a 
                   href="tel:+2290143757982" 
                   className="hover:text-white transition-colors text-sm md:text-base"
@@ -226,8 +226,8 @@ export const Footer: React.FC = () => {
                   +229 01 43 75 79 82
                 </a>
               </li>
-              <li className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                <MapPin className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+              <li className="flex items-start gap-3">
+                <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <span 
                   className="text-sm md:text-base"
                 >

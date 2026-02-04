@@ -21,30 +21,49 @@ function isCloudinaryConfigured(): boolean {
   return hasConfig;
 }
 
-// Fonction d'upload améliorée
+// Fonction d'upload améliorée avec gestion des erreurs
 async function uploadImage(file: File, index: number, bienId?: string): Promise<string> {
-  const buffer = Buffer.from(await file.arrayBuffer());
-  
-  if (!isCloudinaryConfigured()) {
-    // Fallback vers base64
-    const base64 = buffer.toString('base64');
-    return `data:${file.type};base64,${base64}`;
-  }
-  
   try {
-    // Import dynamique pour éviter les erreurs au build
-    const { uploadBufferToCloudinary } = await import('@/lib/cloudinary');
-    return await uploadBufferToCloudinary(buffer, {
-      filename: file.name,
-      index: index,
-      bienId: bienId
+    console.log(`📤 Traitement image ${index + 1}:`, {
+      name: file?.name,
+      size: file?.size,
+      type: file?.type,
+      isFileInstance: file instanceof File,
+      hasArrayBuffer: typeof file?.arrayBuffer === 'function'
     });
-  } catch (error: any) {
-    console.error('❌ Erreur Cloudinary, fallback base64:', error.message);
+
+    // Vérifier si c'est un objet File valide
+    if (!file || !(file instanceof File) || typeof file.arrayBuffer !== 'function') {
+      console.error(`❌ Image ${index + 1}: Objet File invalide`);
+      throw new Error('Objet File invalide');
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
     
-    // Fallback vers base64
-    const base64 = buffer.toString('base64');
-    return `data:${file.type};base64,${base64}`;
+    if (!isCloudinaryConfigured()) {
+      // Fallback vers base64
+      const base64 = buffer.toString('base64');
+      return `data:${file.type};base64,${base64}`;
+    }
+    
+    try {
+      // Import dynamique pour éviter les erreurs au build
+      const { uploadBufferToCloudinary } = await import('@/lib/cloudinary');
+      return await uploadBufferToCloudinary(buffer, {
+        filename: file.name,
+        index: index,
+        bienId: bienId
+      });
+    } catch (error: any) {
+      console.error('❌ Erreur Cloudinary, fallback base64:', error.message);
+      
+      // Fallback vers base64
+      const base64 = buffer.toString('base64');
+      return `data:${file.type};base64,${base64}`;
+    }
+  } catch (error: any) {
+    console.error(`❌ Erreur upload image ${index + 1}:`, error.message);
+    throw error;
   }
 }
 
@@ -61,18 +80,78 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const dataString = formData.get('data') as string;
     const data = JSON.parse(dataString);
-    const photoFiles = formData.getAll('photos') as File[];
-
-    console.log('📤 Publication - Informations:');
+    
+    // CORRECTION CRITIQUE : Vérifier et convertir les fichiers
+    const photoEntries = formData.getAll('photos');
+    
+    // Filtrer et convertir les entrées valides en File
+    const photoFiles: File[] = [];
+    
+    console.log('📤 Photos reçues (brutes):', photoEntries.length);
+    
+    // SOLUTION ALTERNATIVE PLUS SÛRE
+for (let i = 0; i < photoEntries.length; i++) {
+  const entry = photoEntries[i];
+  const entryAny = entry as any;
+  
+  console.log(`\n🔍 Photo ${i + 1}:`, {
+    type: typeof entry,
+    name: entryAny?.name || 'N/A',
+    size: entryAny?.size || 'N/A',
+  });
+  
+  // Vérification simple
+  if (entry && typeof entry === 'object' && 'name' in entryAny && 'size' in entryAny) {
+    try {
+      // Essayer de créer un File à partir de l'entrée
+      let file: File;
+      
+      // Vérifier si on peut accéder à arrayBuffer
+      if (entryAny.arrayBuffer && typeof entryAny.arrayBuffer === 'function') {
+        const buffer = Buffer.from(await entryAny.arrayBuffer());
+        file = new File([buffer], entryAny.name || `image_${i}.jpg`, {
+          type: entryAny.type || 'image/jpeg'
+        });
+      } else if (entry instanceof File) {
+        // Si c'est déjà un File
+        file = entry;
+      } else {
+        // Si on ne peut pas récupérer les données, passer à la suivante
+        console.warn(`⚠️ Photo ${i + 1}: impossible de traiter`);
+        continue;
+      }
+      
+      if (file.size > 0) {
+        photoFiles.push(file);
+        console.log(`✅ Photo ${i + 1} validée: ${file.name}`);
+      }
+    } catch (error: any) {
+      console.error(`❌ Photo ${i + 1} erreur:`, error.message);
+    }
+  }
+}
+    
+    console.log('\n📤 Publication - Informations:');
     console.log('  • Titre:', data.title);
     console.log('  • Catégorie:', data.housingType?.category);
     console.log('  • Ville:', data.location?.city);
-    console.log('  • Photos reçues:', photoFiles.length);
-    console.log('  • Noms des photos:', photoFiles.map(f => f.name));
+    console.log('  • Photos validées:', photoFiles.length, 'sur', photoEntries.length);
+    
+    if (photoFiles.length > 0) {
+      console.log('  • Noms des photos:');
+      photoFiles.forEach((file, i) => {
+        console.log(`      ${i + 1}. ${file.name} (${(file.size / 1024).toFixed(1)} KB, ${file.type})`);
+      });
+    }
+    
     console.log('  • Cloudinary:', isCloudinaryConfigured() ? '✅ ACTIF' : '❌ INACTIF (base64)');
 
-    // Créer d'abord le bien sans images (pour avoir un ID)
-    console.log('📝 Création temporaire du bien pour obtenir un ID...');
+    // Créer un tableau d'URLs placeholder temporaires
+    const placeholderUrls = photoFiles.length > 0 
+      ? Array(photoFiles.length).fill('https://via.placeholder.com/800x600/cccccc/969696?text=Chargement...')
+      : ['https://via.placeholder.com/800x600/cccccc/969696?text=Immobilier+B%C3%A9nin'];
+
+    console.log('📝 Création du bien...');
     
     const bienDataTemp: any = {
       // Informations de base
@@ -130,8 +209,8 @@ export async function POST(request: NextRequest) {
       checkOutTime: data.rules?.checkOutTime || '11:00',
       childrenAllowed: data.rules?.childrenAllowed !== false,
       
-      // Images temporaires
-      images: [],
+      // Images temporaires (placeholders)
+      images: placeholderUrls,
       
       // Propriétaire
       proprietaire: {
@@ -158,29 +237,43 @@ export async function POST(request: NextRequest) {
 
     // Upload des images avec l'ID du bien
     console.log('📤 Début upload des images...');
-    const uploadPromises = photoFiles.map(async (file, index) => {
-      console.log(`\n📤 Upload ${index + 1}/${photoFiles.length}:`);
-      console.log(`   📄 Nom: ${file.name}`);
-      console.log(`   📊 Taille: ${(file.size / 1024).toFixed(1)} KB`);
-      console.log(`   🏷️  Type: ${file.type}`);
-      
-      try {
-        const url = await uploadImage(file, index, bienTemporaire.id.toString());
-        console.log(`   ✅ Réussi: ${url.substring(0, 80)}...`);
-        return url;
-      } catch (error: any) {
-        console.error(`   ❌ Échec: ${error.message}`);
+    
+    let imageUrls: string[] = [];
+    
+    if (photoFiles.length > 0) {
+      const uploadPromises = photoFiles.map(async (file, index) => {
+        console.log(`\n📤 Upload ${index + 1}/${photoFiles.length}:`);
+        console.log(`   📄 Nom: ${file.name}`);
+        console.log(`   📊 Taille: ${(file.size / 1024).toFixed(1)} KB`);
+        console.log(`   🏷️  Type: ${file.type}`);
         
-        // Fallback base64
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const base64 = buffer.toString('base64');
-        const fallbackUrl = `data:${file.type};base64,${base64}`;
-        console.log(`   🔄 Fallback base64 activé`);
-        return fallbackUrl;
-      }
-    });
+        try {
+          const url = await uploadImage(file, index, bienTemporaire.id.toString());
+          console.log(`   ✅ Réussi: ${url.substring(0, 80)}...`);
+          return url;
+        } catch (error: any) {
+          console.error(`   ❌ Échec upload: ${error.message}`);
+          
+          try {
+            // Fallback base64
+            const buffer = Buffer.from(await file.arrayBuffer());
+            const base64 = buffer.toString('base64');
+            const fallbackUrl = `data:${file.type};base64,${base64}`;
+            console.log(`   🔄 Fallback base64 activé`);
+            return fallbackUrl;
+          } catch (fallbackError: any) {
+            console.error(`   ❌ Fallback échoué: ${fallbackError.message}`);
+            // Dernier recours : placeholder
+            return 'https://via.placeholder.com/800x600/cccccc/969696?text=Image+non+disponible';
+          }
+        }
+      });
 
-    const imageUrls = await Promise.all(uploadPromises);
+      imageUrls = await Promise.all(uploadPromises);
+    } else {
+      console.log('ℹ️ Aucune photo à uploader');
+      imageUrls = placeholderUrls;
+    }
 
     // Vérifier les doublons
     const uniqueUrls = [...new Set(imageUrls)];
@@ -191,9 +284,14 @@ export async function POST(request: NextRequest) {
     console.log(`\n📊 RÉSUMÉ UPLOAD:`);
     console.log(`✅ Total uploadées: ${imageUrls.length} images`);
     console.log(`🎯 Uniques: ${uniqueUrls.length} images`);
-    imageUrls.forEach((url, index) => {
-      console.log(`   ${index + 1}: ${url.substring(0, 70)}...`);
-    });
+    
+    if (imageUrls.length > 0) {
+      console.log(`📸 URLs générées:`);
+      imageUrls.forEach((url, index) => {
+        const displayUrl = url.length > 70 ? url.substring(0, 70) + '...' : url;
+        console.log(`   ${index + 1}. ${displayUrl}`);
+      });
+    }
 
     if (imageUrls.length === 0) {
       console.warn('⚠️ Aucune image traitée - ajout placeholder');
@@ -236,164 +334,121 @@ export async function POST(request: NextRequest) {
       console.log(`🔧 Ajout de ${data.amenities.length} équipement(s)`);
       console.log('📋 Équipements reçus:', data.amenities);
       
-      const allEquipements = await prisma.equipement.findMany({
-        select: { id: true, nom: true, code: true }
-      });
-      console.log('📋 Équipements disponibles en base:', allEquipements.map(e => ({ nom: e.nom, code: e.code })));
-      
-      const addedEquipements: string[] = [];
-      const notFoundEquipements: string[] = [];
-      
-      // Mapping des noms communs
-      const commonMappings: Record<string, string> = {
-        'wifi': 'wifi_house',
-        'wi-fi': 'wifi_house',
-        'Wi-Fi': 'wifi_house',
-        'climatisation': 'air_conditioning',
-        'Climatisation': 'air_conditioning',
-        'air conditionné': 'air_conditioning',
-        'piscine': 'swimming_pool',
-        'Piscine': 'swimming_pool',
-        'jardin': 'garden',
-        'Jardin': 'garden',
-        'parking': 'parking_house',
-        'Parking': 'parking_house',
-        'terrasse': 'terrace',
-        'Terrasse': 'terrace',
-        'balcon': 'balcony',
-        'Balcon': 'balcony',
-        'cuisine': 'kitchen_full',
-        'Cuisine': 'kitchen_full',
-        'machine à laver': 'washing_machine',
-        'Machine à laver': 'washing_machine',
-        'tv': 'tv_streaming',
-        'TV': 'tv_streaming',
-        'télévision': 'tv_streaming',
-        'ascenseur': 'elevator',
-        'Ascenseur': 'elevator',
-        'internet': 'wifi_house',
-        'air conditioning': 'air_conditioning',
-        'swimming pool': 'swimming_pool',
-        'terrace': 'terrace',
-        'balcony': 'balcony',
-        'kitchen': 'kitchen_full',
-        'washing machine': 'washing_machine',
-        'television': 'tv_streaming',
-        'elevator': 'elevator',
-        'fibre optique': 'high_speed_wifi',
-        'visioconférence': 'video_conference',
-        'projecteur': 'projector_hd',
-        'imprimante': 'printer_scanner',
-        'sono': 'sound_system',
-        'micro': 'wireless_mics',
-        'scène': 'stage',
-        'piste de danse': 'dance_floor'
-      };
-      
-      for (const amenityInput of data.amenities) {
-        try {
-          console.log(`\n🔍 Recherche équipement: "${amenityInput}"`);
-          
-          const normalizedInput = amenityInput.trim();
-          let equipement = null;
-          
-          // Chercher par code
-          equipement = allEquipements.find(e => 
-            e.code.toLowerCase() === normalizedInput.toLowerCase()
-          );
-          
-          // Chercher par nom
-          if (!equipement) {
-            equipement = allEquipements.find(e => 
-              e.nom.toLowerCase() === normalizedInput.toLowerCase()
-            );
-          }
-          
-          // Mapping
-          if (!equipement && commonMappings[normalizedInput.toLowerCase()]) {
-            const mappedCode = commonMappings[normalizedInput.toLowerCase()];
-            equipement = allEquipements.find(e => e.code === mappedCode);
-          }
-          
-          // Recherche partielle
-          if (!equipement) {
-            equipement = allEquipements.find(e => 
-              e.nom.toLowerCase().includes(normalizedInput.toLowerCase()) ||
-              e.code.toLowerCase().includes(normalizedInput.toLowerCase())
-            );
-          }
-          
-          if (equipement) {
-            console.log(`   ✅ Équipement trouvé: ${equipement.nom} (${equipement.code})`);
+      try {
+        const allEquipements = await prisma.equipement.findMany({
+          select: { id: true, nom: true, code: true }
+        });
+        
+        console.log('📋 Équipements disponibles en base:', allEquipements.length);
+        
+        const addedEquipements: string[] = [];
+        const notFoundEquipements: string[] = [];
+        
+        // Mapping des noms communs
+        const commonMappings: Record<string, string> = {
+          'wifi': 'wifi_house',
+          'wi-fi': 'wifi_house',
+          'Wi-Fi': 'wifi_house',
+          'climatisation': 'air_conditioning',
+          'Climatisation': 'air_conditioning',
+          'air conditionné': 'air_conditioning',
+          'piscine': 'swimming_pool',
+          'Piscine': 'swimming_pool',
+          'jardin': 'garden',
+          'Jardin': 'garden',
+          'parking': 'parking_house',
+          'Parking': 'parking_house',
+          'terrasse': 'terrace',
+          'Terrasse': 'terrace',
+          'balcon': 'balcony',
+          'Balcon': 'balcony',
+          'cuisine': 'kitchen_full',
+          'Cuisine': 'kitchen_full',
+          'machine à laver': 'washing_machine',
+          'Machine à laver': 'washing_machine',
+          'tv': 'tv_streaming',
+          'TV': 'tv_streaming',
+          'télévision': 'tv_streaming',
+          'ascenseur': 'elevator',
+          'Ascenseur': 'elevator',
+          'internet': 'wifi_house',
+          'air conditioning': 'air_conditioning',
+          'swimming pool': 'swimming_pool',
+          'terrace': 'terrace',
+          'balcony': 'balcony',
+          'kitchen': 'kitchen_full',
+          'washing machine': 'washing_machine',
+          'television': 'tv_streaming',
+          'elevator': 'elevator',
+          'fibre optique': 'high_speed_wifi',
+          'visioconférence': 'video_conference',
+          'projecteur': 'projector_hd',
+          'imprimante': 'printer_scanner',
+          'sono': 'sound_system',
+          'micro': 'wireless_mics',
+          'scène': 'stage',
+          'piste de danse': 'dance_floor'
+        };
+        
+        for (const amenityInput of data.amenities) {
+          try {
+            const normalizedInput = amenityInput.trim();
+            let equipement = null;
             
-            const existingLink = await prisma.equipementBien.findFirst({
-              where: { bienId: bienFinal.id, equipementId: equipement.id }
-            });
+            // Chercher par code
+            equipement = allEquipements.find(e => 
+              e.code.toLowerCase() === normalizedInput.toLowerCase()
+            );
             
-            if (!existingLink) {
-              await prisma.equipementBien.create({
-                data: { bienId: bienFinal.id, equipementId: equipement.id }
+            // Chercher par nom
+            if (!equipement) {
+              equipement = allEquipements.find(e => 
+                e.nom.toLowerCase() === normalizedInput.toLowerCase()
+              );
+            }
+            
+            // Mapping
+            if (!equipement && commonMappings[normalizedInput.toLowerCase()]) {
+              const mappedCode = commonMappings[normalizedInput.toLowerCase()];
+              equipement = allEquipements.find(e => e.code === mappedCode);
+            }
+            
+            if (equipement) {
+              const existingLink = await prisma.equipementBien.findFirst({
+                where: { bienId: bienFinal.id, equipementId: equipement.id }
               });
-              addedEquipements.push(equipement.nom);
+              
+              if (!existingLink) {
+                await prisma.equipementBien.create({
+                  data: { bienId: bienFinal.id, equipementId: equipement.id }
+                });
+                addedEquipements.push(equipement.nom);
+              }
             } else {
-              addedEquipements.push(equipement.nom);
+              notFoundEquipements.push(normalizedInput);
             }
-          } else {
-            console.log(`   ❌ Équipement non trouvé: "${normalizedInput}"`);
-            notFoundEquipements.push(normalizedInput);
-            
-            // Créer l'équipement manquant
-            try {
-              const newEquipement = await prisma.equipement.create({
-                data: {
-                  nom: normalizedInput,
-                  code: normalizedInput.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
-                  description: `Équipement: ${normalizedInput}`,
-                  categorie: 'other',
-                  pourMaison: data.housingType?.category === 'HOUSE',
-                  pourBureau: data.housingType?.category === 'OFFICE',
-                  pourEvenement: data.housingType?.category === 'EVENT'
-                }
-              });
-              
-              await prisma.equipementBien.create({
-                data: { bienId: bienFinal.id, equipementId: newEquipement.id }
-              });
-              
-              addedEquipements.push(newEquipement.nom);
-            } catch (createError: any) {
-              console.error(`   ❌ Impossible de créer l'équipement:`, createError.message);
-            }
+          } catch (error: any) {
+            console.error(`⚠️ Erreur avec équipement ${amenityInput}:`, error.message);
           }
-        } catch (error: any) {
-          console.error(`   ⚠️ Erreur avec équipement ${amenityInput}:`, error.message);
         }
-      }
-      
-      console.log(`\n📊 RÉSUMÉ ÉQUIPEMENTS:`);
-      console.log(`✅ ${addedEquipements.length} équipement(s) ajouté(s)`);
-      if (notFoundEquipements.length > 0) {
-        console.log(`❌ ${notFoundEquipements.length} équipement(s) non trouvé(s):`, notFoundEquipements);
+        
+        console.log(`\n📊 RÉSUMÉ ÉQUIPEMENTS:`);
+        console.log(`✅ ${addedEquipements.length} équipement(s) ajouté(s)`);
+        if (notFoundEquipements.length > 0) {
+          console.log(`❌ ${notFoundEquipements.length} équipement(s) non trouvé(s):`, notFoundEquipements);
+        }
+      } catch (error: any) {
+        console.error('⚠️ Erreur lors de l\'ajout des équipements:', error.message);
       }
     }
-
-    // Récupérer le bien complet pour vérification
-    const bienComplet = await prisma.bien.findUnique({
-      where: { id: bienFinal.id },
-      select: { images: true, title: true, category: true }
-    });
 
     console.log('\n🎉 PUBLICATION RÉUSSIE !');
     console.log(`📊 Récapitulatif:`);
     console.log(`   • ID: ${bienFinal.id}`);
-    console.log(`   • Titre: ${bienComplet?.title}`);
-    console.log(`   • Catégorie: ${bienComplet?.category}`);
-    console.log(`   • Images: ${bienComplet?.images?.length || 0}`);
-    if (bienComplet?.images) {
-      bienComplet.images.forEach((url, i) => {
-        console.log(`     ${i+1}. ${url.substring(0, 60)}...`);
-      });
-    }
+    console.log(`   • Titre: ${bienFinal.title}`);
+    console.log(`   • Catégorie: ${bienFinal.category}`);
+    console.log(`   • Images: ${imageUrls.length}`);
+    console.log(`   • Cloudinary: ${isCloudinaryConfigured() ? 'Utilisé' : 'Base64'}`);
 
     return NextResponse.json({
       success: true,
@@ -403,8 +458,7 @@ export async function POST(request: NextRequest) {
         title: bienFinal.title,
         imagesCount: imageUrls.length,
         category: bienFinal.category,
-        cloudinaryUsed: isCloudinaryConfigured(),
-        imageUrls: imageUrls.slice(0, 3) // Retourner quelques URLs pour debug
+        cloudinaryUsed: isCloudinaryConfigured()
       }
     });
     
@@ -427,6 +481,12 @@ export async function POST(request: NextRequest) {
       statusCode = 400;
     } else if (error.message.includes('cloud_name')) {
       errorMessage = 'Cloudinary non configuré. Images sauvegardées en local.';
+      statusCode = 500;
+    } else if (error.message.includes('arrayBuffer is not a function')) {
+      errorMessage = 'Erreur dans le traitement des images. Veuillez réessayer.';
+      statusCode = 400;
+    } else if (error.message.includes('prisma')) {
+      errorMessage = 'Erreur base de données. Veuillez réessayer.';
       statusCode = 500;
     }
     

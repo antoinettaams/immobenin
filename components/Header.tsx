@@ -3,8 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Menu, Globe, UserCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import Image from 'next/image';
+import { usePathname } from 'next/navigation'; 
 
 export const Header: React.FC = () => {
   const [scrolled, setScrolled] = useState<boolean>(false);
@@ -50,26 +49,39 @@ export const Header: React.FC = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between relative">
         {/* Logo avec Link pour navigation Next.js */}
         <Link 
-  href="/" 
-  className="flex items-center gap-2 cursor-pointer group z-50"
-  onClick={handleNavClick}
-  aria-label="Accueil - Retour à la page d'accueil"
+          href="/" 
+          className="flex items-center gap-2 cursor-pointer group z-50"
+          onClick={handleNavClick}
+          aria-label="Accueil - Retour à la page d'accueil"
+        >
+          <div className="text-brand group-hover:scale-110 transition-transform duration-300">
+             <svg 
+  width="32" 
+  height="32" 
+  viewBox="0 0 100 100" 
+  fill="none" 
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
 >
-  <div className="text-brand group-hover:scale-110 transition-transform duration-300 relative w-10 h-10 md:w-12 md:h-12">
-    {/* Votre image de logo - Taille augmentée */}
-    <Image
-      src="/images/home/logo.png"
-      alt="Logo ImmoBenin"
-      fill
-      className="object-contain"
-      sizes="(max-width: 768px) 40px, 48px"
-      priority
-    />
-  </div>
-  <span className="text-xl font-extrabold tracking-tight text-gray-900 group-hover:text-brand transition-colors">
-    ImmoBenin
-  </span>
-</Link>
+  {/* Forme principale (Maison / Pin) */}
+  <path 
+    d="M50 5L15 40V70C15 75 20 80 50 95C80 80 85 75 85 70V40L50 5Z" 
+    fill="#FF385C" 
+  />
+  
+  {/* Cercle central */}
+  <circle cx="50" cy="55" r="12" fill="white" />
+  
+  {/* Fenêtre dans le toit */}
+  <rect x="44" y="24" width="12" height="10" fill="white" />
+  <line x1="50" y1="24" x2="50" y2="34" stroke="#FF385C" strokeWidth="1.5" />
+  <line x1="44" y1="29" x2="56" y2="29" stroke="#FF385C" strokeWidth="1.5" />
+</svg>
+          </div>
+          <span className="text-xl font-extrabold tracking-tight text-gray-900 group-hover:text-brand transition-colors">
+                  ImmoBenin
+                </span>
+        </Link>
         {/* Desktop Navigation avec Link */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-700" aria-label="Navigation principale">
           <Link 
@@ -117,6 +129,14 @@ export const Header: React.FC = () => {
             >
               <Globe className="w-4 h-4" />
               <span>FR</span>
+            </button>
+             <button 
+              className="flex items-center gap-2 border border-gray-300 rounded-full pl-3 pr-2 py-1.5 hover:shadow-md transition-shadow bg-white"
+              aria-label="Menu utilisateur"
+              type="button"
+            >
+              <Menu className="w-4 h-4 text-gray-600" />
+              <UserCircle className="w-8 h-8 text-gray-500 fill-current" />
             </button>
           </div>
 
@@ -180,6 +200,16 @@ export const Header: React.FC = () => {
               >
                 Contact
               </Link>
+               <hr className="border-gray-100" />
+              <div className="flex   gap-6 pt-2">
+                 <button 
+                   className="flex items-center gap-2 text-sm text-gray-500"
+                   type="button"
+                   aria-label="Changer la langue"
+                 >
+                    <Globe className="w-4 h-4" /> FR
+                 </button>
+              </div>
             </nav>
           </motion.div>
         )}

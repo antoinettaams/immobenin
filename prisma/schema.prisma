@@ -77,7 +77,7 @@ model Bien {
   hasStage     Boolean? @default(false)
   hasSoundSystem Boolean? @default(false)
   hasProjector Boolean? @default(false)
-  hasCatering  Boolean?
+  hasCatering  Boolean? @default(false)
   minBookingHours Int?
   
   // === TitleStep ===

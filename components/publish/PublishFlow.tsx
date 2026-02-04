@@ -275,93 +275,145 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
   }, [])
 
   // Afficher le toast de brouillon restauré - UNE SEULE FOIS au chargement initial
-  useEffect(() => {
-    if (isClient && hasDraftRestored && !draftToastShownRef.current) {
-      console.log('🎯 Afficher toast de brouillon restauré (une seule fois)')
-      
-      // Marquer comme montré
-      draftToastShownRef.current = true
-      
-      const showDraftToast = () => {
-        const toastId = toast.custom((t) => (
-          <div 
-            data-draft-restored="true"
-            className={`${t.visible ? 'animate-enter' : 'animate-leave'} 
-              max-w-md w-full bg-blue-50 shadow-lg rounded-lg pointer-events-auto 
-              flex flex-col ring-1 ring-blue-200 border-l-4 border-blue-500`}
-          >
-            <div className="flex-1 p-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-                    </svg>
-                  </div>
+ // Afficher le toast de brouillon restauré - UNE SEULE FOIS au chargement initial
+useEffect(() => {
+  if (isClient && hasDraftRestored && !draftToastShownRef.current) {
+    console.log('🎯 Afficher toast de brouillon restauré (une seule fois)')
+    
+    // Marquer comme montré
+    draftToastShownRef.current = true
+    
+    const showDraftToast = () => {
+      const toastId = toast.custom((t) => (
+        <div 
+          data-draft-restored="true"
+          className={`${t.visible ? 'animate-enter' : 'animate-leave'} 
+            max-w-md w-full bg-blue-50 shadow-lg rounded-lg pointer-events-auto 
+            flex flex-col ring-1 ring-blue-200 border-l-4 border-blue-500`}
+        >
+          <div className="flex-1 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                  </svg>
                 </div>
-                <div className="ml-3 flex-1">
-                  <p className="text-sm font-medium text-blue-900">Brouillon restauré</p>
-                  <p className="mt-1 text-sm text-blue-700">
-                    Vous avez un brouillon enregistré. Continuez là où vous vous êtes arrêté.
-                  </p>
-                  <div className="mt-2 flex items-center text-sm text-blue-600">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100">
-                      Étape {currentStep + 1}/10
-                    </span>
-                  </div>
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-blue-900">Brouillon restauré</p>
+                <p className="mt-1 text-sm text-blue-700">
+                  Vous avez un brouillon enregistré. Continuez là où vous vous êtes arrêté.
+                </p>
+                <div className="mt-2 flex items-center text-sm text-blue-600">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100">
+                    Étape {currentStep + 1}/10
+                  </span>
                 </div>
               </div>
             </div>
-            <div className="flex border-t border-blue-200 divide-x divide-blue-200">
-              <button
-                onClick={() => {
-                  toast.dismiss(toastId)
-                  draftToastShownRef.current = false
-                }}
-                className="flex-1 border border-transparent rounded-bl-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                Rester
-              </button>
-              <button
-                onClick={() => {
-                  toast.dismiss(toastId)
-                  // Effacer le brouillon si l'utilisateur préfère recommencer
-                  localStorage.removeItem('draft_listing')
-                  localStorage.removeItem('draft_current_step')
-                  localStorage.removeItem('draft_saved_at')
-                  draftToastShownRef.current = false
-                  toast.success(
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Brouillon effacé. Commencez une nouvelle annonce.</span>
-                    </div>,
-                    { duration: 3000 }
-                  )
-                }}
-                className="flex-1 border border-transparent rounded-br-lg p-4 flex items-center justify-center text-sm font-medium text-red-600 hover:text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                Effacer
-              </button>
-            </div>
           </div>
-        ), {
-          duration: 8000,
-          position: 'top-center',
-        })
-
-        // Surveiller quand le toast disparaît
-        setTimeout(() => {
-          draftToastShownRef.current = false
-        }, 8500) // Un peu plus long que la durée du toast
-      }
-      
-      // Petit délai pour s'assurer que tout est chargé
-      setTimeout(showDraftToast, 500)
+          <div className="flex border-t border-blue-200 divide-x divide-blue-200">
+            <button
+              onClick={() => {
+                toast.dismiss(toastId)
+                // Ne pas réinitialiser draftToastShownRef.current ici
+                // La modale ne doit plus réapparaître après fermeture
+              }}
+              className="flex-1 border border-transparent rounded-bl-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Rester
+            </button>
+            <button
+              onClick={() => {
+                toast.dismiss(toastId)
+                // Effacer le brouillon si l'utilisateur préfère recommencer
+                localStorage.removeItem('draft_listing')
+                localStorage.removeItem('draft_current_step')
+                localStorage.removeItem('draft_saved_at')
+                // Réinitialiser les données pour recommencer
+                setListingData({
+                  owner: {
+                    telephone: '',
+                    email: '',
+                    nom: '',
+                  },
+                  propertyType: { category: 'house', subType: '', privacy: 'entire' },
+                  location: { country: 'Bénin', city: '', neighborhood: '', address: '' },
+                  basics: {
+                    maxGuests: 0,
+                    bedrooms: 0,
+                    beds: 0,
+                    bathrooms: 0,
+                    size: 0,
+                    floors: 0,
+                    privateEntrance: false,
+                    employees: 0,
+                    offices: 0,
+                    meetingRooms: 0,
+                    workstations: 0,
+                    hasReception: false,
+                    eventCapacity: 0,
+                    kitchenAvailable: false,
+                    parkingSpots: 0,
+                    wheelchairAccessible: false,
+                    hasStage: false,
+                    hasSoundSystem: false,
+                    hasProjector: false,
+                    hasCatering: false,
+                    minBookingHours: 0,
+                  },
+                  amenities: [],
+                  photos: [],
+                  title: '',
+                  description: { summary: '', spaceDescription: '', guestAccess: '', neighborhood: '' },
+                  pricing: {
+                    basePrice: 0,
+                    currency: 'FCFA',
+                    weeklyDiscount: 10,
+                    monthlyDiscount: 20,
+                    cleaningFee: 0,
+                    extraGuestFee: 0,
+                    securityDeposit: 0,
+                  },
+                  rules: {
+                    checkInTime: '15:00',
+                    checkOutTime: '11:00',
+                    smokingAllowed: false,
+                    petsAllowed: false,
+                    partiesAllowed: false,
+                    childrenAllowed: true,
+                  }
+                })
+                setCurrentStep(0)
+                setHasDraftRestored(false)
+                
+                toast.success(
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Brouillon effacé. Commencez une nouvelle annonce.</span>
+                  </div>,
+                  { duration: 3000 }
+                )
+              }}
+              className="flex-1 border border-transparent rounded-br-lg p-4 flex items-center justify-center text-sm font-medium text-red-600 hover:text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              Effacer
+            </button>
+          </div>
+        </div>
+      ), {
+        duration: 8000,
+        position: 'top-center',
+      })
     }
-  }, [isClient, hasDraftRestored]) // Retirer currentStep des dépendances
-
+    
+    // Petit délai pour s'assurer que tout est chargé
+    setTimeout(showDraftToast, 500)
+  }
+}, [isClient, hasDraftRestored]) // RETIRER currentStep des dépendances
   // Validation de chaque étape
   const validateCurrentStep = useCallback((): boolean => {
     console.log(`🔍 VALIDATION étape ${currentStep}`)
@@ -766,33 +818,6 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
     }, 10500) // Un peu plus long que la durée du toast
   }
 
-  // Fonction pour effacer le brouillon
-  const handleClearDraft = () => {
-    localStorage.removeItem('draft_listing')
-    localStorage.removeItem('draft_current_step')
-    localStorage.removeItem('draft_saved_at')
-    
-    // Réinitialiser les refs
-    draftToastShownRef.current = false
-    saveToastShownRef.current = false
-    errorToastShownRef.current = ''
-    
-    toast.success(
-      <div className="flex items-center gap-2">
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-        <span>Brouillon effacé</span>
-      </div>,
-      { duration: 3000 }
-    )
-    
-    // Recharger la page pour recommencer
-    setTimeout(() => {
-      window.location.reload()
-    }, 1000)
-  }
-
   // Fonction pour publier
   const handlePublish = async () => {
     console.log('🚀 HANDLEPUBLISH - Début')
@@ -1097,46 +1122,41 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
                 aria-label="Accueil - Retour à la page d'accueil"
               >
                 <div className="text-brand group-hover:scale-110 transition-transform duration-300">
-                  <svg 
-                    width="32" 
-                    height="32" 
-                    viewBox="0 0 100 100" 
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <path 
-                      d="M50 5L15 40V70C15 75 20 80 50 95C80 80 85 75 85 70V40L50 5Z" 
-                      fill="#FF385C" 
-                    />
-                    <circle cx="50" cy="55" r="12" fill="white" />
-                    <rect x="44" y="24" width="12" height="10" fill="white" />
-                    <line x1="50" y1="24" x2="50" y2="34" stroke="#FF385C" strokeWidth="1.5" />
-                    <line x1="44" y1="29" x2="56" y2="29" stroke="#FF385C" strokeWidth="1.5" />
-                  </svg>
-                </div>
+             <svg 
+  width="32" 
+  height="32" 
+  viewBox="0 0 100 100" 
+  fill="none" 
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+>
+  {/* Forme principale (Maison / Pin) */}
+  <path 
+    d="M50 5L15 40V70C15 75 20 80 50 95C80 80 85 75 85 70V40L50 5Z" 
+    fill="#FF385C" 
+  />
+  
+  {/* Cercle central */}
+  <circle cx="50" cy="55" r="12" fill="white" />
+  
+  {/* Fenêtre dans le toit */}
+  <rect x="44" y="24" width="12" height="10" fill="white" />
+  <line x1="50" y1="24" x2="50" y2="34" stroke="#FF385C" strokeWidth="1.5" />
+  <line x1="44" y1="29" x2="56" y2="29" stroke="#FF385C" strokeWidth="1.5" />
+</svg>
+          </div>
                 <span className="text-xl font-extrabold tracking-tight text-gray-900 group-hover:text-brand transition-colors">
                   ImmoBenin
                 </span>
               </Link>
               
-              {/* Boutons */}
-              <div className="flex items-center gap-4">
-                {hasDraftRestored && (
-                  <button 
-                    onClick={handleClearDraft}
-                    className="text-sm font-medium text-red-600 hover:text-red-800 px-4 py-2 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    Effacer le brouillon
-                  </button>
-                )}
-                <button 
-                  onClick={handleSaveAndExit}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors"
-                >
-                  Sauvegarder et quitter
-                </button>
-              </div>
+              {/* Bouton sauvegarder uniquement */}
+              <button 
+                onClick={handleSaveAndExit}
+                className="text-sm font-medium text-blue-600 hover:text-blue-800 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                Sauvegarder et quitter
+              </button>
             </div>
           </div>
         </header>
