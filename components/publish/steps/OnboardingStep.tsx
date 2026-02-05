@@ -278,21 +278,23 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
             
             {/* Input séparé pour les 8 chiffres */}
             <input
-              ref={phoneInputRef}
-              type="tel"
-              value={formatPhoneDisplay(phoneDigits)}
-              onChange={handlePhoneInputChange}
-              onPaste={handlePhonePaste}
-              onKeyDown={handlePhoneKeyDown}
-              className={`w-full pl-20 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent outline-none ${
-                errors.telephone ? 'border-red-300 bg-red-50' : 'border-gray-300'
-              }`}
-              placeholder="53 99 83 59"
-              disabled={isLoading}
-              maxLength={11} // 8 chiffres + 3 espaces
-              inputMode="numeric"
-              autoComplete="tel-national" // Empêche l'autocomplétion avec le code pays
-            />
+  ref={phoneInputRef}
+  type="tel"
+  value={formatPhoneDisplay(phoneDigits)}
+  onChange={handlePhoneInputChange}
+  onPaste={handlePhonePaste}
+  onKeyDown={handlePhoneKeyDown}
+  className={`w-full pl-20 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent outline-none ${
+    errors.telephone ? 'border-red-300 bg-red-50' : 'border-gray-300'
+  }`}
+  placeholder="53 99 83 59"
+  disabled={isLoading}
+  maxLength={11}
+  inputMode="numeric"
+  autoComplete="off"
+  pattern="[0-9]*"
+/>
+
           </div>
           {errors.telephone && (
             <p className="mt-1 text-sm text-red-600">{errors.telephone}</p>
