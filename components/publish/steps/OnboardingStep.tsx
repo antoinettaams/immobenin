@@ -262,47 +262,48 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
         </div>
 
         {/* Téléphone */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-gray-500" />
-              Téléphone
-            </div>
-          </label>
-          <div className="relative">
-            {/* Code pays fixe et non cliquable */}
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-700 flex items-center gap-2 pointer-events-none">
-              <span className="text-lg">🇧🇯</span>
-              <span className="font-medium">+229</span>
-            </div>
-            
-            {/* Input séparé pour les 8 chiffres */}
-            <input
-  ref={phoneInputRef}
-  type="tel"
-  value={formatPhoneDisplay(phoneDigits)}
-  onChange={handlePhoneInputChange}
-  onPaste={handlePhonePaste}
-  onKeyDown={handlePhoneKeyDown}
-  className={`w-full pl-20 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent outline-none ${
-    errors.telephone ? 'border-red-300 bg-red-50' : 'border-gray-300'
-  }`}
-  placeholder="53 99 83 59"
-  disabled={isLoading}
-  maxLength={11}
-  inputMode="numeric"
-  autoComplete="off"
-  pattern="[0-9]*"
-/>
+        <div className="w-full">
+  <label className="block text-sm font-medium mb-2">
+    Numéro de téléphone
+  </label>
 
-          </div>
-          {errors.telephone && (
-            <p className="mt-1 text-sm text-red-600">{errors.telephone}</p>
-          )}
-          <p className="text-xs text-gray-500 mt-1">
-            Saisissez uniquement les 8 chiffres de votre numéro béninois
-          </p>
-        </div>
+  <div className="flex">
+    
+    {/* Indicatif pays */}
+    <div className="flex items-center px-4 border border-r-0 rounded-l-lg bg-gray-100 text-gray-700 font-medium">
+      +229
+    </div>
+
+    {/* Input numéro local */}
+    <input
+      ref={phoneInputRef}
+      type="tel"
+      value={formatPhoneDisplay(phoneDigits)}
+      onChange={handlePhoneInputChange}
+      onPaste={handlePhonePaste}
+      onKeyDown={handlePhoneKeyDown}
+      placeholder="53 99 83 59"
+      disabled={isLoading}
+      maxLength={11}
+      inputMode="numeric"
+      autoComplete="off"
+      pattern="[0-9]*"
+      className={`w-full px-4 py-3 border rounded-r-lg focus:ring-2 focus:ring-brand focus:border-transparent outline-none ${
+        errors.telephone
+          ? 'border-red-300 bg-red-50'
+          : 'border-gray-300'
+      }`}
+    />
+
+  </div>
+
+  {errors.telephone && (
+    <p className="text-red-500 text-sm mt-1">
+      {errors.telephone}
+    </p>
+  )}
+</div>
+
 
         {/* Email */}
         <div>
