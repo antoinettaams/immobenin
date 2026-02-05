@@ -1,8 +1,19 @@
 "use client";
 import React from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
-import { Home, Building2, PartyPopper, Trees, Umbrella, ShieldCheck, MessageCircle, MapPin, HeartHandshake } from 'lucide-react';
+import Image from 'next/image'; 
+import { 
+  Home, 
+  Building2, 
+  PartyPopper, 
+  Trees, 
+  Umbrella, 
+  ShieldCheck, 
+  MessageCircle, 
+  MapPin, 
+  HeartHandshake 
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Category {
   id: string;
@@ -10,17 +21,72 @@ interface Category {
   icon: React.ElementType;
   image: string;
   description: string;
+  searchParam: string;
+  categoryType: 'house' | 'office' | 'event';
 }
 
 const categories: Category[] = [
-  { id: '1', name: 'Maisons & Apparts', icon: Home, image: '/images/home/appart.jpg', description: 'Logements entiers pour votre confort' },
-  { id: '2', name: 'Bureaux & Travail', icon: Building2, image: '/images/home/bureau.jpg', description: 'Espaces professionnels équipés' },
-  { id: '3', name: 'Événements', icon: PartyPopper, image: '/images/home/salle-events.jpg', description: 'Salles pour mariages et fêtes' },
-  { id: '4', name: 'Espaces Privés', icon: Trees, image: '/images/home/salle-privees.jpg', description: 'Salles de réunion, Jardins, cours et villas' },
-  { id: '5', name: 'Tourisme', icon: Umbrella, image: '/images/home/tourisme.jpg', description: 'Hébergements pour vacanciers' },
+  { 
+    id: '1', 
+    name: 'Maisons & Apparts', 
+    icon: Home, 
+    image: '/images/home/appart.jpg', 
+    description: 'Logements entiers pour votre confort',
+    searchParam: 'Maison',
+    categoryType: 'house'
+  },
+  { 
+    id: '2', 
+    name: 'Bureaux & Travail', 
+    icon: Building2, 
+    image: '/images/home/bureau.jpg', 
+    description: 'Espaces professionnels équipés',
+    searchParam: 'Bureau',
+    categoryType: 'office'
+  },
+  { 
+    id: '3', 
+    name: 'Événements', 
+    icon: PartyPopper, 
+    image: '/images/home/salle-events.jpg', 
+    description: 'Salles pour mariages et fêtes',
+    searchParam: 'Salle événement',
+    categoryType: 'event'
+  },
+  { 
+    id: '4', 
+    name: 'Espaces Privés', 
+    icon: Trees, 
+    image: '/images/home/salle-privees.jpg', 
+    description: 'Salles de réunion, Jardins, cours et villas',
+    searchParam: 'Salle privée',
+    categoryType: 'event'
+  },
+  { 
+    id: '5', 
+    name: 'Tourisme', 
+    icon: Umbrella, 
+    image: '/images/home/tourisme.jpg', 
+    description: 'Hébergements pour vacanciers',
+    searchParam: 'Maison',
+    categoryType: 'house'
+  },
 ];
 
 export const CategoriesSection: React.FC = () => {
+  const router = useRouter();
+
+  const handleCategoryClick = (category: Category) => {
+    // Créer un objet de paramètres pour la recherche
+    const searchParams = new URLSearchParams({
+      type: category.searchParam,
+      category: category.categoryType
+    });
+
+    // Rediriger vers la page de recherche avec les paramètres
+    router.push(`/search?${searchParams.toString()}`);
+  };
+
   return (
     <section 
       className="py-20 bg-white"
@@ -59,6 +125,14 @@ export const CategoriesSection: React.FC = () => {
                 }}
                 className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm cursor-pointer group"
                 aria-label={`Catégorie ${cat.name}: ${cat.description}`}
+                onClick={() => handleCategoryClick(cat)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleCategoryClick(cat);
+                  }
+                }}
               >
                 <div className="relative h-48 md:h-52 overflow-hidden">
                   <div 
@@ -85,6 +159,9 @@ export const CategoriesSection: React.FC = () => {
                   <p className="text-sm text-gray-500 mt-1">
                     {cat.description}
                   </p>
+                  <div className="mt-2 flex items-center text-xs text-brand font-medium">
+                    <span>Voir les offres →</span>
+                  </div>
                 </div>
               </motion.article>
             );
@@ -121,81 +198,80 @@ export const ValuePropSection: React.FC = () => {
 
   return (
     <section 
-  className="py-20 bg-gray-50"
-  aria-labelledby="value-prop-title"
->
-  <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-    <div className="flex flex-col lg:flex-row items-stretch gap-8 lg:gap-12">
-      
-      {/* Texte et features */}
-      <div className="lg:w-1/2 flex flex-col justify-center items-center lg:items-start text-center lg:text-left">
-        <h2 
-          id="value-prop-title"
-          className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 lg:mb-6 leading-tight"
-        >
-          Pourquoi choisir <span className="text-brand">ImmoBenin</span> ?
-        </h2>
-        <p className="text-lg text-gray-600 mb-8 lg:mb-10">
-          Oubliez les groupes Facebook et les démarches incertaines. Nous apportons la confiance, 
-          la sécurité et la simplicité dans la location immobilière au Bénin.
-        </p>
+      className="py-20 bg-gray-50"
+      aria-labelledby="value-prop-title"
+    >
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col lg:flex-row items-stretch gap-8 lg:gap-12">
+          
+          {/* Texte et features */}
+          <div className="lg:w-1/2 flex flex-col justify-center items-center lg:items-start text-center lg:text-left">
+            <h2 
+              id="value-prop-title"
+              className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 lg:mb-6 leading-tight"
+            >
+              Pourquoi choisir <span className="text-brand">ImmoBenin</span> ?
+            </h2>
+            <p className="text-lg text-gray-600 mb-8 lg:mb-10">
+              Oubliez les groupes Facebook et les démarches incertaines. Nous apportons la confiance, 
+              la sécurité et la simplicité dans la location immobilière au Bénin.
+            </p>
 
-        <div className="grid sm:grid-cols-2 gap-6 lg:gap-8 w-full">
-          {features.map((feature, index) => {
-            const IconComponent = feature.icon;
-            return (
-              <div 
-                key={index} 
-                className="flex flex-col items-center lg:items-start gap-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="p-3 bg-brand/10 rounded-xl text-brand">
-                  <IconComponent className="w-7 h-7 lg:w-8 lg:h-8" aria-hidden="true" />
-                </div>
-                <h3 className="font-bold text-lg lg:text-xl text-gray-900">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600 text-sm lg:text-base">
-                  {feature.desc}
-                </p>
-              </div>
-            );
-          })}
+            <div className="grid sm:grid-cols-2 gap-6 lg:gap-8 w-full">
+              {features.map((feature, index) => {
+                const IconComponent = feature.icon;
+                return (
+                  <div 
+                    key={index} 
+                    className="flex flex-col items-center lg:items-start gap-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="p-3 bg-brand/10 rounded-xl text-brand">
+                      <IconComponent className="w-7 h-7 lg:w-8 lg:h-8" aria-hidden="true" />
+                    </div>
+                    <h3 className="font-bold text-lg lg:text-xl text-gray-900">
+                      {feature.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm lg:text-base">
+                      {feature.desc}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Image animée */}
+          <div className="lg:w-1/2 relative flex items-center">
+            <motion.figure
+              initial={{ rotate: -3 }}
+              whileInView={{ rotate: 3 }}
+              transition={{ 
+                duration: 5, 
+                repeat: Infinity, 
+                repeatType: "mirror",
+                ease: "easeInOut"
+              }}
+              viewport={{ once: true }}
+              className="relative w-full h-full min-h-[500px] lg:min-h-[600px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white"
+              aria-label="Famille heureuse utilisant ImmoBenin au Bénin"
+            >
+              <Image
+                src="/images/home/tresor.jpg"
+                alt="Famille heureuse utilisant les services ImmoBenin"
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
+            </motion.figure>
+            
+            {/* Élément décoratif */}
+            <div 
+              className="absolute -bottom-6 -left-6 w-32 h-32 lg:w-40 lg:h-40 bg-brand rounded-full blur-3xl opacity-20" 
+              aria-hidden="true"
+            />
+          </div>
         </div>
       </div>
-
-      {/* Image animée */}
-      <div className="lg:w-1/2 relative flex items-center">
-        <motion.figure
-          initial={{ rotate: -3 }}
-          whileInView={{ rotate: 3 }}
-          transition={{ 
-            duration: 5, 
-            repeat: Infinity, 
-            repeatType: "mirror",
-            ease: "easeInOut"
-          }}
-          viewport={{ once: true }}
-          className="relative w-full h-full min-h-[500px] lg:min-h-[600px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white"
-          aria-label="Famille heureuse utilisant ImmoBenin au Bénin"
-        >
-          <Image
-            src="/images/home/tresor.jpg"
-            alt="Famille heureuse utilisant les services ImmoBenin"
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 50vw"
-          />
-        </motion.figure>
-        
-        {/* Élément décoratif */}
-        <div 
-          className="absolute -bottom-6 -left-6 w-32 h-32 lg:w-40 lg:h-40 bg-brand rounded-full blur-3xl opacity-20" 
-          aria-hidden="true"
-        />
-      </div>
-
-    </div>
-  </div>
-</section>
+    </section>
   );
 };

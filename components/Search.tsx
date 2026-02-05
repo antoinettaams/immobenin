@@ -7,24 +7,24 @@ import {
   Calendar, Clock, Image as ImageIcon, MapPin, 
   Building, Maximize, Car, Wind, Coffee, 
   Tv, Music, Projector, ChefHat, Bell, Shield, Key,
-  Accessibility, // Icône pour accessibilité/PMR
-  Droplets, // Pour piscine
-  ParkingCircle, // Pour parking
-  Microwave, // Pour cuisine
-  Cable, // Pour TV
-  Utensils, // Pour restauration
-  DoorOpen, // Pour entrée
-  Square, // Pour surface
-  Briefcase, // Pour bureau
-  Printer, // Pour réunion
-  Sofa, // Pour salle
-  Waves, // Pour son
-  Presentation, // Pour projecteur
-  GlassWater, // Pour bar
-  Dumbbell, // Pour fitness
-  Trees // Pour jardin
+  Accessibility,
+  Droplets,
+  ParkingCircle,
+  Microwave,
+  Cable,
+  Utensils,
+  DoorOpen,
+  Square,
+  Briefcase,
+  Printer,
+  Sofa,
+  Waves,
+  Presentation,
+  GlassWater,
+  Dumbbell,
+  Trees
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface SearchProps {
   onBack: () => void;  
@@ -134,15 +134,24 @@ interface Property {
 
 export const Search: React.FC<SearchProps> = ({ onBack }) => {
   const router = useRouter();
-  const [location, setLocation] = useState<string>("");
-  const [propertyType, setPropertyType] = useState<string>("");
-  const [guests, setGuests] = useState<string>("");
+  const searchParams = useSearchParams();
+  
+  // Lire les paramètres d'URL au chargement
+  const initialLocation = searchParams.get('location') || '';
+  const initialType = searchParams.get('type') || '';
+  const initialGuests = searchParams.get('guests') || '';
+  const initialCategory = searchParams.get('category') || '';
+
+  const [location, setLocation] = useState<string>(initialLocation);
+  const [propertyType, setPropertyType] = useState<string>(initialType);
+  const [guests, setGuests] = useState<string>(initialGuests);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
+  const [hasInitialSearch, setHasInitialSearch] = useState<boolean>(false);
 
   // Fonction pour normaliser les données de l'API
   const normalizePropertyData = (apiData: any): Property => {
@@ -432,9 +441,19 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Charger les propriétés au démarrage
+  // Charger les propriétés au démarrage avec les paramètres d'URL
   useEffect(() => {
-    fetchProperties();
+    fetchProperties({
+      location: initialLocation,
+      type: initialType,
+      guests: initialGuests
+    });
+    
+    // Si on a des paramètres d'URL, on considère que c'est une recherche initiale
+    if (initialLocation || initialType || initialGuests) {
+      setIsSearching(true);
+      setHasInitialSearch(true);
+    }
   }, []);
 
   const fetchProperties = async (filters?: { location?: string; type?: string; guests?: string }) => {
@@ -580,6 +599,15 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
   const handleSearchSubmit = (): void => {
     setIsSearching(true);
     filterProperties();
+    
+    // Mettre à jour l'URL avec les paramètres de recherche
+    const params = new URLSearchParams();
+    if (location) params.append('location', location);
+    if (propertyType) params.append('type', propertyType);
+    if (guests) params.append('guests', guests);
+    
+    const newUrl = `/search?${params.toString()}`;
+    router.push(newUrl);
   };
 
   const handleShowAllProperties = (): void => {
@@ -588,6 +616,9 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
     setGuests("");
     setIsSearching(false);
     fetchProperties();
+    
+    // Réinitialiser l'URL
+    router.push('/search');
   };
 
   const filterProperties = () => {
@@ -595,6 +626,8 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
   };
 
   useEffect(() => {
+    if (hasInitialSearch) return; // Ne pas déclencher automatiquement après une recherche initiale
+    
     if (location || propertyType || guests) {
       const timeoutId = setTimeout(() => {
         filterProperties();
@@ -603,7 +636,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [location, propertyType, guests]);
+  }, [location, propertyType, guests, hasInitialSearch]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -1335,8 +1368,6 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                       </div>
                     )}
                   </div>
-                  
-                   
                   
                   {/* Description */}
                   <div className="mb-6">

@@ -120,11 +120,6 @@ interface PublishFlowProps {
   onComplete?: () => void
 }
 
-// Variable globale pour gérer l'affichage unique des toasts
-let globalDraftToastShown = false
-let globalSaveToastTimestamps: Record<string, number> = {}
-let globalToastRegistry = new Set<string>()
-
 export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0)
   const [isClient, setIsClient] = useState(false)
@@ -135,14 +130,13 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
   const [publishError, setPublishError] = useState<string | null>(null)
   const [hasDraftRestored, setHasDraftRestored] = useState(false)
   
-  // Références avec des IDs uniques
-  const componentIdRef = useRef(`publish-flow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
-  const draftToastRegisteredRef = useRef(false)
-  const mountedRef = useRef(false)
-  const toastCleanupTimerRef = useRef<NodeJS.Timeout | null>(null)
+  // Références pour éviter les doublons
+  const draftToastShownRef = useRef(false)
+  const saveToastShownRef = useRef(false)
+  const errorToastShownRef = useRef<string>('') // Pour suivre quel toast d'erreur est affiché
 
   // LOG INITIAL
-  console.log('🚀 PUBLISHFLOW INITIALISÉ - ID:', componentIdRef.current)
+  console.log('🚀 PUBLISHFLOW INITIALISÉ')
 
   const [listingData, setListingData] = useState<ListingData>({
     owner: {
@@ -202,7 +196,6 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
   // Charger le brouillon au démarrage
   useEffect(() => {
     console.log('🔄 useEffect initial - chargement du brouillon')
-    mountedRef.current = true
     setIsClient(true)
     
     const loadDraft = () => {
@@ -277,57 +270,22 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
     
     return () => {
       console.log('🧹 Cleanup timeout initial')
-      mountedRef.current = false
       clearTimeout(timer)
-      if (toastCleanupTimerRef.current) {
-        clearTimeout(toastCleanupTimerRef.current)
-      }
     }
   }, [])
 
-  // Afficher le toast de brouillon restauré - APPROCHE ROBUSTE
+  // Afficher le toast de brouillon restauré - UNE SEULE FOIS au chargement initial
   useEffect(() => {
-    if (isClient && hasDraftRestored && mountedRef.current) {
-      console.log('🎯 Vérification toast brouillon - globalDraftToastShown:', globalDraftToastShown)
+    if (isClient && hasDraftRestored && !draftToastShownRef.current) {
+      console.log('🎯 Afficher toast de brouillon restauré (une seule fois)')
       
-      if (globalDraftToastShown || draftToastRegisteredRef.current) {
-        console.log('⏳ Toast global déjà affiché ou enregistré, on ignore')
-        return
-      }
+      // Marquer comme montré
+      draftToastShownRef.current = true
       
-      // Vérifier si un toast est déjà visible dans le DOM
-      const existingToast = document.querySelector('[data-toast-type="draft-restored"]')
-      if (existingToast) {
-        console.log('⚠️ Toast déjà présent dans le DOM, on ignore')
-        return
-      }
-      
-      // Marquer comme enregistré pour ce composant
-      draftToastRegisteredRef.current = true
-      
-      // Petit délai pour éviter les conflits
-      const showToastTimeout = setTimeout(() => {
-        if (!mountedRef.current) return
-        
-        // Vérifier une dernière fois
-        if (globalDraftToastShown) {
-          console.log('⏳ Vérification finale: toast déjà affiché globalement')
-          return
-        }
-        
-        const existingToastFinal = document.querySelector('[data-toast-type="draft-restored"]')
-        if (existingToastFinal) {
-          console.log('⚠️ Vérification finale: toast déjà dans DOM')
-          return
-        }
-        
-        console.log('🔄 Affichage du toast de brouillon')
-        globalDraftToastShown = true
-        
+      const showDraftToast = () => {
         const toastId = toast.custom((t) => (
           <div 
-            data-toast-type="draft-restored"
-            data-component-id={componentIdRef.current}
+            data-draft-restored="true"
             className={`${t.visible ? 'animate-enter' : 'animate-leave'} 
               max-w-md w-full bg-blue-50 shadow-lg rounded-lg pointer-events-auto 
               flex flex-col ring-1 ring-blue-200 border-l-4 border-blue-500`}
@@ -358,13 +316,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
               <button
                 onClick={() => {
                   toast.dismiss(toastId)
-                  // Nettoyer après fermeture manuelle
-                  setTimeout(() => {
-                    const toastElement = document.querySelector(`[data-component-id="${componentIdRef.current}"]`)
-                    if (!toastElement) {
-                      globalDraftToastShown = false
-                    }
-                  }, 100)
+                  draftToastShownRef.current = false
                 }}
                 className="flex-1 border border-transparent rounded-bl-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -373,71 +325,11 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
               <button
                 onClick={() => {
                   toast.dismiss(toastId)
-                  
                   // Effacer le brouillon si l'utilisateur préfère recommencer
                   localStorage.removeItem('draft_listing')
                   localStorage.removeItem('draft_current_step')
                   localStorage.removeItem('draft_saved_at')
-                  
-                  // Réinitialiser les données pour recommencer
-                  setListingData({
-                    owner: {
-                      telephone: '',
-                      email: '',
-                      nom: '',
-                    },
-                    propertyType: { category: 'house', subType: '', privacy: 'entire' },
-                    location: { country: 'Bénin', city: '', neighborhood: '', address: '' },
-                    basics: {
-                      maxGuests: 0,
-                      bedrooms: 0,
-                      beds: 0,
-                      bathrooms: 0,
-                      size: 0,
-                      floors: 0,
-                      privateEntrance: false,
-                      employees: 0,
-                      offices: 0,
-                      meetingRooms: 0,
-                      workstations: 0,
-                      hasReception: false,
-                      eventCapacity: 0,
-                      kitchenAvailable: false,
-                      parkingSpots: 0,
-                      wheelchairAccessible: false,
-                      hasStage: false,
-                      hasSoundSystem: false,
-                      hasProjector: false,
-                      hasCatering: false,
-                      minBookingHours: 0,
-                    },
-                    amenities: [],
-                    photos: [],
-                    title: '',
-                    description: { summary: '', spaceDescription: '', guestAccess: '', neighborhood: '' },
-                    pricing: {
-                      basePrice: 0,
-                      currency: 'FCFA',
-                      weeklyDiscount: 10,
-                      monthlyDiscount: 20,
-                      cleaningFee: 0,
-                      extraGuestFee: 0,
-                      securityDeposit: 0,
-                    },
-                    rules: {
-                      checkInTime: '15:00',
-                      checkOutTime: '11:00',
-                      smokingAllowed: false,
-                      petsAllowed: false,
-                      partiesAllowed: false,
-                      childrenAllowed: true,
-                    }
-                  })
-                  
-                  setCurrentStep(0)
-                  setHasDraftRestored(false)
-                  globalDraftToastShown = false
-                  
+                  draftToastShownRef.current = false
                   toast.success(
                     <div className="flex items-center gap-2">
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -445,14 +337,12 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
                       </svg>
                       <span>Brouillon effacé. Commencez une nouvelle annonce.</span>
                     </div>,
-                    { 
-                      duration: 3000,
-                      style: {
-                        background: '#F0FDF4',
-                        border: '1px solid #BBF7D0',
-                      }
-                    }
+                    { duration: 3000 }
                   )
+                  // Redirection vers la page d'accueil
+                  setTimeout(() => {
+                    window.location.href = '/'
+                  }, 1500)
                 }}
                 className="flex-1 border border-transparent rounded-br-lg p-4 flex items-center justify-center text-sm font-medium text-red-600 hover:text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
               >
@@ -463,24 +353,16 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
         ), {
           duration: 8000,
           position: 'top-center',
-          onDismiss: () => {
-            // Nettoyer après la disparition automatique
-            setTimeout(() => {
-              globalDraftToastShown = false
-            }, 100)
-          }
         })
-        
-        // Nettoyer automatiquement après 9 secondes
-        toastCleanupTimerRef.current = setTimeout(() => {
-          globalDraftToastShown = false
-        }, 9000)
-        
-      }, 1500) // Délai pour éviter les conflits
-      
-      return () => {
-        clearTimeout(showToastTimeout)
+
+        // Surveiller quand le toast disparaît
+        setTimeout(() => {
+          draftToastShownRef.current = false
+        }, 8500) // Un peu plus long que la durée du toast
       }
+      
+      // Petit délai pour s'assurer que tout est chargé
+      setTimeout(showDraftToast, 500)
     }
   }, [isClient, hasDraftRestored, currentStep])
 
@@ -636,24 +518,29 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
     })
   }, [isClient, currentStep])
 
-  // Mise à jour spécifique pour les basics
+  // Mise à jour spécifique pour les basics (qui nécessite un traitement spécial)
   const updateBasicsData = useCallback((data: BasicsData) => {
     console.log('📝 UPDATE basics data')
     setListingData(prev => {
+      // S'assurer que tous les champs sont présents
       const newBasicsData: ListingData['basics'] = {
         ...prev.basics,
+        // Champs communs
         size: data.size || 0,
         floors: data.floors || 0,
+        // Champs pour maison
         maxGuests: data.maxGuests || 0,
         bedrooms: data.bedrooms || 0,
         beds: data.beds || 0,
         bathrooms: data.bathrooms || 0,
         privateEntrance: data.privateEntrance || false,
+        // Champs pour bureau
         employees: data.employees || 0,
         offices: data.offices || 0,
         meetingRooms: data.meetingRooms || 0,
         workstations: data.workstations || 0,
         hasReception: data.hasReception || false,
+        // Champs pour événement
         eventCapacity: data.eventCapacity || 0,
         kitchenAvailable: data.kitchenAvailable || false,
         parkingSpots: data.parkingSpots || 0,
@@ -670,6 +557,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
         basics: newBasicsData
       }
       
+      // Sauvegarder automatiquement dans le brouillon
       if (isClient) {
         localStorage.setItem('draft_listing', JSON.stringify(newData))
         localStorage.setItem('draft_current_step', currentStep.toString())
@@ -705,16 +593,18 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
     console.log('➡️ NEXTSTEP appelé - étape actuelle:', currentStep)
     
     if (!stepValidation.isValid || stepValidation.isLoading) {
+      // Afficher un toast d'erreur avec prévention des doublons
       if (!stepValidation.isValid && isClient) {
         const errorKey = `error-step-${currentStep}`
-        const now = Date.now()
-        const lastShownTime = globalSaveToastTimestamps[errorKey] || 0
         
-        if (now - lastShownTime < 3000) {
+        // Vérifier si ce toast d'erreur est déjà affiché
+        if (errorToastShownRef.current === errorKey) {
+          console.log('⚠️ Toast d\'erreur déjà affiché pour cette étape, on ignore')
           return
         }
         
-        globalSaveToastTimestamps[errorKey] = now
+        // Marquer ce toast comme affiché
+        errorToastShownRef.current = errorKey
         
         const errorMessages = {
           0: "Veuillez remplir tous vos coordonnées",
@@ -729,7 +619,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           9: "Veuillez vérifier toutes les informations"
         }
         
-        toast.error(
+        const toastId = toast.error(
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -750,9 +640,17 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
             }
           }
         )
+
+        // Surveiller quand le toast disparaît
+        setTimeout(() => {
+          errorToastShownRef.current = ''
+        }, 4500) // Un peu plus long que la durée du toast
       }
       return
     }
+    
+    // Réinitialiser le ref d'erreur quand on passe à l'étape suivante
+    errorToastShownRef.current = ''
     
     setStepValidation(prev => ({ ...prev, isLoading: true }))
     
@@ -776,31 +674,21 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
     }
   }
 
-  // Fonction pour sauvegarder et quitter
+  // Fonction pour sauvegarder et quitter - EMPÊCHER LES DOUBLONS
   const handleSaveAndExit = () => {
     console.log('💾 SAVE AND EXIT appelé')
     
-    const now = Date.now()
-    const lastShownTime = globalSaveToastTimestamps['save-exit'] || 0
-    
-    if (now - lastShownTime < 5000) {
-      console.log('⏳ Toast récent, on ignore')
+    // Empêcher les doublons avec ref
+    if (saveToastShownRef.current) {
+      console.log('⚠️ Toast déjà affiché, on ignore')
       return
     }
     
-    // Vérifier si un toast est déjà visible
-    const existingToast = document.querySelector('[data-toast-type="save-exit"]')
-    if (existingToast) {
-      console.log('⚠️ Toast déjà présent dans le DOM')
-      return
-    }
-    
-    globalSaveToastTimestamps['save-exit'] = now
+    saveToastShownRef.current = true
     
     const toastId = toast.custom((t) => (
       <div 
-        data-toast-type="save-exit"
-        data-component-id={componentIdRef.current}
+        data-save-exit="true"
         className={`${t.visible ? 'animate-enter' : 'animate-leave'} 
           max-w-md w-full bg-green-50 shadow-lg rounded-lg pointer-events-auto 
           flex flex-col ring-1 ring-green-200 border-l-4 border-green-500`}
@@ -834,6 +722,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           <button
             onClick={() => {
               toast.dismiss(toastId)
+              saveToastShownRef.current = false
             }}
             className="flex-1 border border-transparent rounded-bl-lg p-4 flex items-center justify-center text-sm font-medium text-green-600 hover:text-green-500 hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500"
           >
@@ -848,6 +737,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
               localStorage.setItem('draft_current_step', currentStep.toString())
               localStorage.setItem('draft_saved_at', new Date().toISOString())
               
+              // Afficher un message de confirmation supplémentaire
               toast.success(
                 <div className="flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -855,15 +745,10 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
                   </svg>
                   <span>Redirection vers l'accueil...</span>
                 </div>,
-                { 
-                  duration: 2000,
-                  style: {
-                    background: '#F0FDF4',
-                    border: '1px solid #BBF7D0',
-                  }
-                }
+                { duration: 2000 }
               )
               
+              // Redirection différée
               setTimeout(() => {
                 window.location.href = '/'
               }, 1500)
@@ -878,6 +763,11 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
       duration: 10000,
       position: 'top-center',
     })
+
+    // Surveiller quand le toast disparaît
+    setTimeout(() => {
+      saveToastShownRef.current = false
+    }, 10500) // Un peu plus long que la durée du toast
   }
 
   // Fonction pour publier
@@ -961,9 +851,10 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
       localStorage.removeItem('draft_current_step')
       localStorage.removeItem('draft_saved_at')
       
-      // Réinitialiser les variables globales
-      globalDraftToastShown = false
-      globalSaveToastTimestamps = {}
+      // Réinitialiser les refs
+      draftToastShownRef.current = false
+      saveToastShownRef.current = false
+      errorToastShownRef.current = ''
 
       toast.success(
         <div className="flex flex-col gap-1">
@@ -1183,24 +1074,29 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
                 aria-label="Accueil - Retour à la page d'accueil"
               >
                 <div className="text-brand group-hover:scale-110 transition-transform duration-300">
-                  <svg 
-                    width="32" 
-                    height="32" 
-                    viewBox="0 0 100 100" 
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <path 
-                      d="M50 5L15 40V70C15 75 20 80 50 95C80 80 85 75 85 70V40L50 5Z" 
-                      fill="#FF385C" 
-                    />
-                    <circle cx="50" cy="55" r="12" fill="white" />
-                    <rect x="44" y="24" width="12" height="10" fill="white" />
-                    <line x1="50" y1="24" x2="50" y2="34" stroke="#FF385C" strokeWidth="1.5" />
-                    <line x1="44" y1="29" x2="56" y2="29" stroke="#FF385C" strokeWidth="1.5" />
-                  </svg>
-                </div>
+             <svg 
+  width="32" 
+  height="32" 
+  viewBox="0 0 100 100" 
+  fill="none" 
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+>
+  {/* Forme principale (Maison / Pin) */}
+  <path 
+    d="M50 5L15 40V70C15 75 20 80 50 95C80 80 85 75 85 70V40L50 5Z" 
+    fill="#FF385C" 
+  />
+  
+  {/* Cercle central */}
+  <circle cx="50" cy="55" r="12" fill="white" />
+  
+  {/* Fenêtre dans le toit */}
+  <rect x="44" y="24" width="12" height="10" fill="white" />
+  <line x1="50" y1="24" x2="50" y2="34" stroke="#FF385C" strokeWidth="1.5" />
+  <line x1="44" y1="29" x2="56" y2="29" stroke="#FF385C" strokeWidth="1.5" />
+</svg>
+          </div>
                 <span className="text-xl font-extrabold tracking-tight text-gray-900 group-hover:text-brand transition-colors">
                   ImmoBenin
                 </span>
