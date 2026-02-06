@@ -351,83 +351,111 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
   };
 
   // Composant pour afficher une image avec fallback
-  const PropertyImageDisplay = ({ 
-    src, 
-    alt, 
-    className = "", 
-    fallback = true,
-    propertyId
-  }: { 
-    src: string; 
-    alt: string; 
-    className?: string;
-    fallback?: boolean;
-    propertyId?: number;
-  }) => {
-    const [hasError, setHasError] = useState(false);
-    const [imgSrc, setImgSrc] = useState<string>('');
+  // Dans PropertyImageDisplay, ajoutez un état de chargement
+const PropertyImageDisplay = ({ 
+  src, 
+  alt, 
+  className = "", 
+  fallback = true,
+  propertyId
+}: { 
+  src: string; 
+  alt: string; 
+  className?: string;
+  fallback?: boolean;
+  propertyId?: number;
+}) => {
+  const [hasError, setHasError] = useState(false);
+  const [imgSrc, setImgSrc] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true); // AJOUTÉ
 
-    useEffect(() => {
-      if (src && src.trim().length > 10) {
-        let cleanedSrc = src.trim();
-        
-        // Nettoyer les base64
-        if (cleanedSrc.startsWith('data:image')) {
-          cleanedSrc = cleanedSrc.replace('...[BASE64_TROP_LONG]', '');
-        }
-        
-        // Cloudinary HTTPS
-        if (cleanedSrc.includes('cloudinary.com') && cleanedSrc.startsWith('http://')) {
-          cleanedSrc = cleanedSrc.replace('http://', 'https://');
-        }
-        
-        // Ne pas essayer d'afficher les URLs blob
-        if (cleanedSrc.startsWith('blob:')) {
-          setImgSrc('');
-          setHasError(true);
-          return;
-        }
-        
-        setImgSrc(cleanedSrc);
-        setHasError(false);
-      } else {
+  useEffect(() => {
+    if (src && src.trim().length > 10) {
+      setIsLoading(true); // Commence le chargement
+      setHasError(false);
+      
+      let cleanedSrc = src.trim();
+      
+      // Nettoyer les base64
+      if (cleanedSrc.startsWith('data:image')) {
+        cleanedSrc = cleanedSrc.replace('...[BASE64_TROP_LONG]', '');
+      }
+      
+      // Cloudinary HTTPS
+      if (cleanedSrc.includes('cloudinary.com') && cleanedSrc.startsWith('http://')) {
+        cleanedSrc = cleanedSrc.replace('http://', 'https://');
+      }
+      
+      // Ne pas essayer d'afficher les URLs blob
+      if (cleanedSrc.startsWith('blob:')) {
         setImgSrc('');
         setHasError(true);
+        setIsLoading(false);
+        return;
       }
-    }, [src, alt]);
-
-    const handleError = () => {
-      setHasError(true);
-    };
-
-    // Si pas d'image ou erreur
-    if (!imgSrc || hasError || imgSrc === '') {
-      if (!fallback) return null;
       
-      return (
-        <div className={`${className} bg-gray-200 flex items-center justify-center`}>
-          <div className="text-center p-4">
-            <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <span className="text-gray-500 text-xs">Image non disponible</span>
-            {propertyId && (
-              <span className="text-gray-400 text-xs block mt-1">Bien #{propertyId}</span>
-            )}
-          </div>
-        </div>
-      );
+      setImgSrc(cleanedSrc);
+      
+      // Précharger l'image
+      const img = new Image();
+      img.src = cleanedSrc;
+      img.onload = () => {
+        setIsLoading(false);
+      };
+      img.onerror = () => {
+        setHasError(true);
+        setIsLoading(false);
+      };
+    } else {
+      setImgSrc('');
+      setHasError(true);
+      setIsLoading(false);
     }
+  }, [src]);
 
-    return (
-      <img
-        src={imgSrc}
-        alt={alt}
-        className={className}
-        onError={handleError}
-        loading="lazy"
-        crossOrigin="anonymous"
-      />
-    );
+  const handleError = () => {
+    setHasError(true);
+    setIsLoading(false);
   };
+
+  // Pendant le chargement - Afficher un placeholder animé
+  if (isLoading) {
+    return (
+      <div className={`${className} bg-gray-200 flex items-center justify-center`}>
+        <div className="animate-pulse bg-gray-300 w-full h-full"></div>
+      </div>
+    );
+  }
+
+  // Si pas d'image ou erreur
+  if (!imgSrc || hasError || imgSrc === '') {
+    if (!fallback) return null;
+    
+    return (
+      <div className={`${className} bg-gray-200 flex items-center justify-center`}>
+        <div className="text-center p-4">
+          <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+          <span className="text-gray-500 text-xs">Image non disponible</span>
+          {propertyId && (
+            <span className="text-gray-400 text-xs block mt-1">Bien #{propertyId}</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={imgSrc}
+      alt={alt}
+      className={`${className} transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+      onLoad={() => setIsLoading(false)}
+      onError={handleError}
+      loading="lazy"
+      crossOrigin="anonymous"
+    />
+  );
+};
 
   // Détecter si on est sur mobile
   useEffect(() => {

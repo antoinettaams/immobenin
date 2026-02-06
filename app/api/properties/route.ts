@@ -67,15 +67,15 @@ export async function GET(request: NextRequest) {
     const properties = await prisma.bien.findMany({
       where,
       // INCLURE TOUTES LES RELATIONS SANS SELECT (pour avoir tous les champs)
-      include: {
-        description: true, // Tous les champs de Description
-        proprietaire: true, // Tous les champs de Utilisateur
-        equipements: {
-          include: {
-            equipement: true // Tous les champs de Equipement
-          }
-        }
-      },
+      include: {  // ✅ UNE SEULE ACCOLADE OUVERTE
+  description: true,
+  proprietaire: true,
+  equipements: {
+    include: {
+      equipement: true
+    }
+  }
+},
       take: parseInt(limit),
       skip: parseInt(offset),
       orderBy: {

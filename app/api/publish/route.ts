@@ -1,9 +1,12 @@
-// app/api/publish/route.ts - CORRIGÉ COMPLET
+// app/api/publish/route.ts - COMPLÈTE AVEC VÉRIFICATION DE LIMITE
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+// CONSTANTE DE LIMITE - AJOUTÉE
+const MAX_LISTINGS_PER_USER = 5
 
 // Fonction pour vérifier la configuration Cloudinary
 function isCloudinaryConfigured(): boolean {
@@ -81,6 +84,48 @@ export async function POST(request: NextRequest) {
     const dataString = formData.get('data') as string;
     const data = JSON.parse(dataString);
     
+    // ============ VÉRIFICATION DE LA LIMITE - SECTION AJOUTÉE ============
+    const ownerEmail = data.onboarding?.email;
+    if (ownerEmail) {
+      console.log(`🔍 Vérification limite pour: ${ownerEmail}`);
+      
+      try {
+        // Trouver l'utilisateur
+        const utilisateur = await prisma.utilisateur.findUnique({
+          where: { email: ownerEmail },
+          select: { id: true }
+        });
+        
+        let count = 0;
+        if (utilisateur) {
+          // Compter les annonces de l'utilisateur
+          count = await prisma.bien.count({
+            where: {
+              proprietaireId: utilisateur.id
+            }
+          });
+        }
+        
+        console.log(`📊 Annonces actuelles: ${count} / ${MAX_LISTINGS_PER_USER}`);
+        
+        // Vérifier si la limite est atteinte
+        if (count >= MAX_LISTINGS_PER_USER) {
+          return NextResponse.json({
+            success: false,
+            error: `LIMIT_REACHED: Vous avez déjà ${count} annonces. La limite est de ${MAX_LISTINGS_PER_USER} annonces par propriétaire.`,
+            limitReached: true,
+            currentCount: count,
+            maxLimit: MAX_LISTINGS_PER_USER
+          }, { status: 403 });
+        }
+        
+        console.log(`✅ Limite OK: ${count + 1}/${MAX_LISTINGS_PER_USER}`);
+      } catch (countError) {
+        console.warn('⚠️ Erreur vérification limite, continue:', countError);
+      }
+    }
+    // ============ FIN DE LA VÉRIFICATION DE LIMITE ============
+    
     // CORRECTION CRITIQUE : Vérifier et convertir les fichiers
     const photoEntries = formData.getAll('photos');
     
@@ -90,46 +135,46 @@ export async function POST(request: NextRequest) {
     console.log('📤 Photos reçues (brutes):', photoEntries.length);
     
     // SOLUTION ALTERNATIVE PLUS SÛRE
-for (let i = 0; i < photoEntries.length; i++) {
-  const entry = photoEntries[i];
-  const entryAny = entry as any;
-  
-  console.log(`\n🔍 Photo ${i + 1}:`, {
-    type: typeof entry,
-    name: entryAny?.name || 'N/A',
-    size: entryAny?.size || 'N/A',
-  });
-  
-  // Vérification simple
-  if (entry && typeof entry === 'object' && 'name' in entryAny && 'size' in entryAny) {
-    try {
-      // Essayer de créer un File à partir de l'entrée
-      let file: File;
+    for (let i = 0; i < photoEntries.length; i++) {
+      const entry = photoEntries[i];
+      const entryAny = entry as any;
       
-      // Vérifier si on peut accéder à arrayBuffer
-      if (entryAny.arrayBuffer && typeof entryAny.arrayBuffer === 'function') {
-        const buffer = Buffer.from(await entryAny.arrayBuffer());
-        file = new File([buffer], entryAny.name || `image_${i}.jpg`, {
-          type: entryAny.type || 'image/jpeg'
-        });
-      } else if (entry instanceof File) {
-        // Si c'est déjà un File
-        file = entry;
-      } else {
-        // Si on ne peut pas récupérer les données, passer à la suivante
-        console.warn(`⚠️ Photo ${i + 1}: impossible de traiter`);
-        continue;
-      }
+      console.log(`\n🔍 Photo ${i + 1}:`, {
+        type: typeof entry,
+        name: entryAny?.name || 'N/A',
+        size: entryAny?.size || 'N/A',
+      });
       
-      if (file.size > 0) {
-        photoFiles.push(file);
-        console.log(`✅ Photo ${i + 1} validée: ${file.name}`);
+      // Vérification simple
+      if (entry && typeof entry === 'object' && 'name' in entryAny && 'size' in entryAny) {
+        try {
+          // Essayer de créer un File à partir de l'entrée
+          let file: File;
+          
+          // Vérifier si on peut accéder à arrayBuffer
+          if (entryAny.arrayBuffer && typeof entryAny.arrayBuffer === 'function') {
+            const buffer = Buffer.from(await entryAny.arrayBuffer());
+            file = new File([buffer], entryAny.name || `image_${i}.jpg`, {
+              type: entryAny.type || 'image/jpeg'
+            });
+          } else if (entry instanceof File) {
+            // Si c'est déjà un File
+            file = entry;
+          } else {
+            // Si on ne peut pas récupérer les données, passer à la suivante
+            console.warn(`⚠️ Photo ${i + 1}: impossible de traiter`);
+            continue;
+          }
+          
+          if (file.size > 0) {
+            photoFiles.push(file);
+            console.log(`✅ Photo ${i + 1} validée: ${file.name}`);
+          }
+        } catch (error: any) {
+          console.error(`❌ Photo ${i + 1} erreur:`, error.message);
+        }
       }
-    } catch (error: any) {
-      console.error(`❌ Photo ${i + 1} erreur:`, error.message);
     }
-  }
-}
     
     console.log('\n📤 Publication - Informations:');
     console.log('  • Titre:', data.title);
@@ -145,6 +190,7 @@ for (let i = 0; i < photoEntries.length; i++) {
     }
     
     console.log('  • Cloudinary:', isCloudinaryConfigured() ? '✅ ACTIF' : '❌ INACTIF (base64)');
+    console.log('  • Limite:', `${MAX_LISTINGS_PER_USER} annonces max`); // AJOUTÉ
 
     // Créer un tableau d'URLs placeholder temporaires
     const placeholderUrls = photoFiles.length > 0 
@@ -449,6 +495,7 @@ for (let i = 0; i < photoEntries.length; i++) {
     console.log(`   • Catégorie: ${bienFinal.category}`);
     console.log(`   • Images: ${imageUrls.length}`);
     console.log(`   • Cloudinary: ${isCloudinaryConfigured() ? 'Utilisé' : 'Base64'}`);
+    console.log(`   • Limite respectée: ✅`); // AJOUTÉ
 
     return NextResponse.json({
       success: true,
@@ -488,6 +535,9 @@ for (let i = 0; i < photoEntries.length; i++) {
     } else if (error.message.includes('prisma')) {
       errorMessage = 'Erreur base de données. Veuillez réessayer.';
       statusCode = 500;
+    } else if (error.message.includes('LIMIT_REACHED')) { // AJOUTÉ
+      errorMessage = error.message.replace('LIMIT_REACHED: ', '');
+      statusCode = 403;
     }
     
     return NextResponse.json(
