@@ -20,11 +20,14 @@ interface PhotosStepProps {
 export const PhotosStep: React.FC<PhotosStepProps> = ({
   data,
   onUpdate,
+  onNext,
+  onBack,
 }) => {
   const [photos, setPhotos] = useState<Photo[]>(data);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [validationError, setValidationError] = useState<string>('');
 
   // Vérifier qu'on est côté client
   React.useEffect(() => {
@@ -55,6 +58,9 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
     
     setPhotos(updatedPhotos);
     onUpdate(updatedPhotos);
+    
+    // Vérifier la validation après ajout
+    checkValidation(updatedPhotos);
     
     // Simulation de progression d'upload
     setUploadProgress(0);
@@ -104,6 +110,7 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
     
     setPhotos(updatedPhotos);
     onUpdate(updatedPhotos);
+    checkValidation(updatedPhotos);
   };
 
   const setPrimaryPhoto = (id: string) => {
@@ -123,6 +130,25 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
     onUpdate(updatedPhotos);
   };
 
+  // Vérifier la validation
+  const checkValidation = (photoList: Photo[] = photos) => {
+    if (photoList.length < 3) {
+      setValidationError(`Minimum 3 photos requis (${photoList.length} chargées)`);
+      return false;
+    }
+    setValidationError('');
+    return true;
+  };
+
+  // Gérer le clic sur Suivant
+  const handleNext = () => {
+    if (photos.length < 3) {
+      setValidationError(`Veuillez charger au minimum 3 photos (${photos.length} chargées)`);
+      return;
+    }
+    onNext();
+  };
+
   // Nettoyer les URLs blob quand le composant se démonte
   React.useEffect(() => {
     return () => {
@@ -136,7 +162,10 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
     };
   }, []);
 
-  const canContinue = photos.length >= 3;
+  // Vérifier la validation initiale
+  React.useEffect(() => {
+    checkValidation(data);
+  }, []);
 
   // Si pas encore côté client, afficher un loader
   if (!isClient) {
@@ -163,6 +192,19 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
           Les voyageurs veulent voir à quoi ressemble votre espace avant de réserver
         </p>
       </div>
+
+      {/* Message d'erreur de validation */}
+      {validationError && (
+        <div className="mb-4 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+          <X className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-red-800 font-medium text-sm sm:text-base">{validationError}</p>
+            <p className="text-red-600 text-xs sm:text-sm mt-1">
+              Vous ne pourrez pas passer à l'étape suivante tant que vous n'aurez pas au moins 3 photos.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Zone de drop */}
       <div
@@ -357,44 +399,53 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
               </li>
               <li className="flex items-start">
                 <span className="mr-2">•</span>
-                <span>Minimum 5 photos recommandées</span>
+                <span><strong>Minimum 3 photos requis</strong> (plus c'est mieux)</span>
               </li>
             </ul>
           </div>
         </div>
       </div>
 
-      {/* Compteur minimum */}
+      {/* Compteur et validation */}
       <div className="mb-6 sm:mb-8 p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="font-bold text-gray-900 text-sm sm:text-base">
-              {photos.length >= 5 ? '✓ ' : ''}
+          <div className="flex-1">
+            <div className={`font-bold text-sm sm:text-base mb-1 ${
+              photos.length >= 3 ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {photos.length >= 3 ? '✓ ' : '✗ '}
               {photos.length} photo{photos.length > 1 ? 's' : ''} téléchargée{photos.length > 1 ? 's' : ''}
             </div>
             <div className="text-xs sm:text-sm text-gray-600">
-              Minimum 5 photos recommandées ({Math.max(0, 5 - photos.length)} restantes)
+              {photos.length >= 3 
+                ? 'Minimum 3 photos atteint ✓'
+                : `Minimum 3 photos requis (${3 - photos.length} restante${3 - photos.length > 1 ? 's' : ''})`
+              }
             </div>
           </div>
-          {photos.length > 0 && (
-            <button
-              onClick={() => {
-                // Nettoyer toutes les URLs blob
-                if (typeof window !== 'undefined' && window.URL) {
-                  photos.forEach(photo => {
-                    if (photo.url && photo.url.startsWith('blob:')) {
-                      URL.revokeObjectURL(photo.url);
-                    }
-                  });
-                }
-                setPhotos([]);
-                onUpdate([]);
-              }}
-              className="text-xs sm:text-sm text-red-600 hover:text-red-700 font-medium py-1 sm:py-2 px-2 sm:px-3 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              Supprimer toutes les photos
-            </button>
-          )}
+          
+          <div className="flex gap-2">
+            {photos.length > 0 && (
+              <button
+                onClick={() => {
+                  // Nettoyer toutes les URLs blob
+                  if (typeof window !== 'undefined' && window.URL) {
+                    photos.forEach(photo => {
+                      if (photo.url && photo.url.startsWith('blob:')) {
+                        URL.revokeObjectURL(photo.url);
+                      }
+                    });
+                  }
+                  setPhotos([]);
+                  onUpdate([]);
+                  setValidationError('Minimum 3 photos requis (0 chargées)');
+                }}
+                className="text-xs sm:text-sm text-red-600 hover:text-red-700 font-medium py-1 sm:py-2 px-2 sm:px-3 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                Tout supprimer
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

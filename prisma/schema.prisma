@@ -7,159 +7,116 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enums EXACTEMENT comme dans tes interfaces
+model Utilisateur {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  nom       String
+  telephone String
+  createdAt DateTime @default(now())
+  biens     Bien[]
+
+  @@map("utilisateurs")
+}
+
+model Bien {
+  id                   Int              @id @default(autoincrement())
+  images               String[]
+  category             Category
+  subType              String
+  privacy              Privacy?
+  country              String           @default("Bénin")
+  city                 String
+  neighborhood         String?
+  address              String
+  postalCode           String?
+  latitude             Float?
+  longitude            Float?
+  size                 Int?
+  floors               Int?
+  maxGuests            Int?
+  bedrooms             Int?
+  beds                 Int?
+  bathrooms            Int?
+  privateEntrance      Boolean?         @default(false)
+  employees            Int?
+  offices              Int?
+  meetingRooms         Int?
+  workstations         Int?
+  eventCapacity        Int?
+  parkingSpots         Int?
+  wheelchairAccessible Boolean?         @default(false)
+  hasStage             Boolean?         @default(false)
+  hasSoundSystem       Boolean?         @default(false)
+  hasProjector         Boolean?         @default(false)
+  minBookingHours      Int?
+  title                String?
+  basePrice            Float?
+  currency             String           @default("FCFA")
+  weeklyDiscount       Float?           @default(0)
+  monthlyDiscount      Float?           @default(0)
+  cleaningFee          Float?           @default(0)
+  extraGuestFee        Float?           @default(0)
+  securityDeposit      Float?           @default(0)
+  checkInTime          String?
+  checkOutTime         String?
+  childrenAllowed      Boolean?         @default(true)
+  isPublished          Boolean          @default(false)
+  proprietaireId       Int
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  proprietaire         Utilisateur      @relation(fields: [proprietaireId], references: [id])
+  description          Description?
+  equipements          EquipementBien[]
+
+  @@map("biens")
+}
+
+model Description {
+  id               Int      @id @default(autoincrement())
+  summary          String
+  spaceDescription String
+  guestAccess      String
+  neighborhoodInfo String
+  bienId           Int      @unique
+  createdAt        DateTime @default(now())
+  bien             Bien     @relation(fields: [bienId], references: [id])
+
+  @@map("descriptions")
+}
+
+model Equipement {
+  id            Int              @id @default(autoincrement())
+  code          String           @unique
+  nom           String
+  description   String?
+  categorie     String
+  pourMaison    Boolean          @default(false)
+  pourBureau    Boolean          @default(false)
+  pourEvenement Boolean          @default(false)
+  biens         EquipementBien[]
+
+  @@map("equipements")
+}
+
+model EquipementBien {
+  id           Int        @id @default(autoincrement())
+  bienId       Int
+  equipementId Int
+  bien         Bien       @relation(fields: [bienId], references: [id])
+  equipement   Equipement @relation(fields: [equipementId], references: [id])
+
+  @@unique([bienId, equipementId])
+  @@map("equipement_biens")
+}
+
 enum Category {
   HOUSE
   OFFICE
   EVENT
 }
 
-enum Privacy { 
-  ENTIRE 
+enum Privacy {
+  ENTIRE
   PRIVATE
   SHARED
-}
-
-// Modèle Utilisateur (nécessaire pour les propriétaires)
-model Utilisateur {
-  id          Int      @id @default(autoincrement())
-  email       String   @unique
-  nom         String
-  telephone   String   // Enlevé le ? pour rendre obligatoire
-  createdAt   DateTime @default(now())
-  
-  biens       Bien[]
-  
-  @@map("utilisateurs")
-}
-
-// Modèle Bien - CORRESPOND EXACTEMENT à HousingTypeStep + LocationStep + BasicsStep
-model Bien {
-  id          Int      @id @default(autoincrement())
-  
-  // === HousingTypeStep ===
-  images      String[]
-  category    Category // "house" | "office" | "event"
-  subType     String   // Le sous-type spécifique
-  privacy     Privacy? // "entire" | "private" | "shared" (optionnel pour office/event)
-  
-  // === LocationStep ===
-  country     String   @default("Bénin")
-  city        String
-  neighborhood String?
-  address     String
-  postalCode  String?
-  latitude    Float?
-  longitude   Float?
-  
-  // === BasicsStep ===
-  // Champs communs
-  size        Int?     // surface en m²
-  floors      Int?     // étage (0 = rez-de-chaussée)
-  
-  // Champs spécifiques maison
-  maxGuests   Int?
-  bedrooms    Int?
-  beds        Int?
-  bathrooms   Int?
-  privateEntrance Boolean? @default(false)
-  
-  // Champs spécifiques bureau
-  employees   Int?
-  offices     Int?
-  meetingRooms Int?
-  workstations Int?
-  
-  // Champs spécifiques événement
-  eventCapacity Int?
-  parkingSpots Int?
-  wheelchairAccessible Boolean? @default(false)
-  hasStage     Boolean? @default(false)
-  hasSoundSystem Boolean? @default(false)
-  hasProjector Boolean? @default(false)
-  hasCatering  Boolean? @default(false)
-  minBookingHours Int?
-  
-  // === TitleStep ===
-  title       String?
-  
-  // === PriceStep ===
-  basePrice   Float?
-  currency    String   @default("FCFA")
-  weeklyDiscount Float? @default(0)
-  monthlyDiscount Float? @default(0)
-  cleaningFee Float? @default(0)
-  extraGuestFee Float? @default(0)
-  securityDeposit Float? @default(0)
-  
-  // === Rules (vu dans ReviewStep) ===
-  checkInTime  String?
-  checkOutTime String?
-  childrenAllowed Boolean? @default(true)
-  
-  // Statut de publication
-  isPublished Boolean  @default(false)
-  
-  // === Relations ===
-  proprietaireId Int
-  proprietaire    Utilisateur @relation(fields: [proprietaireId], references: [id])
-  
-  // Relation avec Description (DescriptionStep)
-  description   Description?
-  
-  // Relation avec équipements (AmenitiesStep) - UNIQUEMENT UNE FOIS
-  equipements  EquipementBien[]
-  
-  // Timestamps
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  @@map("biens")
-}
-
-// Modèle Description - CORRESPOND EXACTEMENT à DescriptionStep
-model Description {
-  id               Int    @id @default(autoincrement())
-  summary          String // DescriptionStep.summary
-  spaceDescription String // DescriptionStep.spaceDescription
-  guestAccess      String // DescriptionStep.guestAccess
-  neighborhoodInfo String // DescriptionStep.neighborhood
-  
-  bienId           Int    @unique
-  bien             Bien   @relation(fields: [bienId], references: [id])
-  
-  createdAt        DateTime @default(now())
-  
-  @@map("descriptions")
-}
-
-// Modèle Equipement - Pour stocker les équipements (AmenitiesStep)
-model Equipement {
-  id          Int     @id @default(autoincrement())
-  code        String  @unique // "wifi_house", "high_speed_wifi", etc.
-  nom         String
-  description String?
-  categorie   String  // "essential", "comfort", "security", etc.
-  
-  // Filtrage par type de bien
-  pourMaison   Boolean @default(false)
-  pourBureau   Boolean @default(false)
-  pourEvenement Boolean @default(false)
-  
-  biens        EquipementBien[]
-  
-  @@map("equipements")
-}
-
-// Table de liaison pour les équipements (AmenitiesStep.data est string[])
-model EquipementBien {
-  id           Int        @id @default(autoincrement())
-  bienId       Int
-  equipementId Int
-  
-  bien         Bien       @relation(fields: [bienId], references: [id])
-  equipement   Equipement @relation(fields: [equipementId], references: [id])
-  
-  @@unique([bienId, equipementId])
-  @@map("equipement_biens")
 }

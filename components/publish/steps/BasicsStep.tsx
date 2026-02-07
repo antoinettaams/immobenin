@@ -162,18 +162,22 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
   const toggleBoolean = (field: keyof BasicsData) =>
     updateField(field, !(localData[field] as boolean));
 
-  const canContinue = () => {
-    switch (propertyCategory) {
-      case "house":
-        return (localData.maxGuests ?? 0) > 0 && (localData.beds ?? 0) > 0 && (localData.size ?? 0) > 0;
-      case "office":
-        return (localData.employees ?? 0) > 0 && (localData.size ?? 0) > 0;
-      case "event":
-        return (localData.eventCapacity ?? 0) > 0 && (localData.size ?? 0) > 0;
-      default:
-        return false;
-    }
-  };
+  // Dans BasicsStep.tsx, modifiez la fonction canContinue
+const canContinue = () => {
+  switch (propertyCategory) {
+    case "house":
+      return (localData.maxGuests ?? 0) > 0 && (localData.beds ?? 0) > 0;
+      // Retirer: && (localData.size ?? 0) > 0
+    case "office":
+      return (localData.employees ?? 0) > 0;
+      // Retirer: && (localData.size ?? 0) > 0
+    case "event":
+      return (localData.eventCapacity ?? 0) > 0;
+      // Retirer: && (localData.size ?? 0) > 0
+    default:
+      return false;
+  }
+};
 
   const Counter = ({
     icon: Icon,
@@ -284,8 +288,6 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
             <Counter icon={Bed} label="Chambres" description="Chambres à coucher séparées" field="bedrooms" unit="chambres" />
             <Counter icon={Bed} label="Lits" description="Nombre total de lits (inclut canapé-lit si applicable)" field="beds" unit="lits" min={1} />
             <Counter icon={Bath} label="Salles de bain" description="Salles de bain complètes avec douche/bain" field="bathrooms" unit="salles" />
-            <CheckboxOption icon={DoorClosed} label="Entrée privée" description="Les voyageurs ont leur propre entrée" field="privateEntrance" checked={localData.privateEntrance ?? false} />
-            <CheckboxOption icon={Utensils} label="Cuisine disponible" description="Cuisine équipée accessible aux voyageurs" field="kitchenAvailable" checked={localData.kitchenAvailable ?? false} />
           </>
         )}
 

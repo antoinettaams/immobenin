@@ -123,10 +123,14 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
   const [hasDraftRestored, setHasDraftRestored] = useState(false)
   const [userListingCount, setUserListingCount] = useState<number>(0)
   
+  // AJOUT: ÉTATS POUR LES CONDITIONS
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [infoCertified, setInfoCertified] = useState(false)
+  
   // Références pour éviter les doublons - TOUS LES HOOKS ICI
   const draftToastShownRef = useRef(false)
   const errorToastShownRef = useRef<string>('')
-  const isSubmittingRef = useRef(false) // AJOUTÉ pour empêcher double soumission
+  const isSubmittingRef = useRef(false)
 
   const [listingData, setListingData] = useState<ListingData>({
     owner: {
@@ -343,28 +347,25 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
         if (listingData.propertyType.category === 'house') {
           isValid = Boolean(
             listingData.basics.maxGuests > 0 &&
-            listingData.basics.beds > 0 &&
-            listingData.basics.size > 0
+            listingData.basics.beds > 0
           )
         } else if (listingData.propertyType.category === 'office') {
           isValid = Boolean(
-            listingData.basics.employees > 0 &&
-            listingData.basics.size > 0
+            listingData.basics.employees > 0
           )
         } else if (listingData.propertyType.category === 'event') {
           isValid = Boolean(
-            listingData.basics.eventCapacity > 0 &&
-            listingData.basics.size > 0
+            listingData.basics.eventCapacity > 0
           )
         }
-        break
+        break;
 
       case 4:
         isValid = listingData.amenities.length > 0
         break
 
       case 5:
-        isValid = listingData.photos.length >= 1
+        isValid = listingData.photos.length >= 3 
         break
 
       case 6:
@@ -396,7 +397,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           Boolean(listingData.propertyType.subType.trim()) &&
           Boolean(listingData.location.city.trim()) &&
           Boolean(listingData.location.address.trim()) &&
-          listingData.photos.length >= 1 &&
+          listingData.photos.length >= 3 &&
           Boolean(listingData.title.trim()) &&
           Boolean(listingData.description.summary.trim()) &&
           listingData.pricing.basePrice > 0;
@@ -405,22 +406,21 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
         if (listingData.propertyType.category === 'house') {
           basicsValid = Boolean(
             listingData.basics.maxGuests > 0 &&
-            listingData.basics.beds > 0 &&
-            listingData.basics.size > 0
+            listingData.basics.beds > 0
           );
         } else if (listingData.propertyType.category === 'office') {
           basicsValid = Boolean(
-            listingData.basics.employees > 0 &&
-            listingData.basics.size > 0
+            listingData.basics.employees > 0
           );
         } else if (listingData.propertyType.category === 'event') {
           basicsValid = Boolean(
-            listingData.basics.eventCapacity > 0 &&
-            listingData.basics.size > 0
+            listingData.basics.eventCapacity > 0
           );
         }
-        
-        isValid = allStepsValid && basicsValid;
+
+        // AJOUT: VALIDATION DES CONDITIONS
+        const conditionsValid = termsAccepted && infoCertified; 
+        isValid = allStepsValid && basicsValid && conditionsValid;
         break
 
       default:
@@ -429,7 +429,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
 
     setStepValidation(prev => ({ ...prev, isValid }))
     return isValid
-  }, [currentStep, listingData])
+  }, [currentStep, listingData, termsAccepted, infoCertified]) // AJOUT: DEPENDANCES
 
   // Mise à jour des données
   const updateData = useCallback(<K extends keyof ListingData>(section: K, data: ListingData[K]) => {
@@ -530,11 +530,11 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
           2: "Veuillez renseigner la ville et l'adresse",
           3: "Veuillez remplir les informations de base",
           4: "Veuillez sélectionner au moins une commodité",
-          5: "Veuillez ajouter au moins une photo",
+          5: "Veuillez ajouter au moins 3 photos",
           6: "Le titre doit faire au moins 10 caractères",
           7: "Le résumé doit faire au moins 50 caractères",
           8: "Veuillez définir un prix de base",
-          9: "Veuillez vérifier toutes les informations"
+          9: "Veuillez vérifier toutes les informations et accepter les conditions"
         }
         
         toast.error(
@@ -598,7 +598,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
     window.location.href = '/'
   }
 
-  // Fonction pour publier - CORRIGÉ SANS HOOKS
+  // Fonction pour publier
   const handlePublish = async () => {
     console.log('🚀 HANDLEPUBLISH - Début')
     
@@ -731,7 +731,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
       localStorage.removeItem('draft_current_step')
       localStorage.removeItem('draft_saved_at')
       
-      // Réinitialiser les refs (sans utiliser de hook, juste assignation)
+      // Réinitialiser les refs
       draftToastShownRef.current = false
       errorToastShownRef.current = ''
 
@@ -911,6 +911,11 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
             onBack={prevStep}
             isLoading={stepValidation.isLoading}
             error={publishError}
+            // PASSER LES ÉTATS ET SETTERS
+            termsAccepted={termsAccepted}
+            infoCertified={infoCertified}
+            onTermsAcceptedChange={setTermsAccepted}
+            onInfoCertifiedChange={setInfoCertified}
           />
         )
       default:

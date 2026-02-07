@@ -1,10 +1,9 @@
 // components/publish/steps/ReviewStep.tsx
 "use client";
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Check, 
   Edit2, 
-  Calendar, 
   Users, 
   Star, 
   Shield,
@@ -14,8 +13,7 @@ import {
   Camera,
   DollarSign,
   Globe,
-  AlertCircle,
-  Loader2
+  AlertCircle
 } from 'lucide-react';
 import { ListingData } from '../PublishFlow';
 
@@ -26,6 +24,11 @@ interface ReviewStepProps {
   onBack: () => void;
   isLoading?: boolean;
   error?: string | null;
+  // PROPS POUR LES CONDITIONS
+  termsAccepted: boolean;
+  infoCertified: boolean;
+  onTermsAcceptedChange: (value: boolean) => void;
+  onInfoCertifiedChange: (value: boolean) => void;
 }
 
 export const ReviewStep: React.FC<ReviewStepProps> = ({
@@ -34,10 +37,13 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   onSubmit,
   onBack,
   isLoading = false,
-  error = null
+  error = null,
+  // DESTRUCTURER LES PROPS DES CONDITIONS
+  termsAccepted,
+  infoCertified,
+  onTermsAcceptedChange,
+  onInfoCertifiedChange
 }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('fr-BJ').format(price) + ' FCFA';
   };
@@ -62,7 +68,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
 
   const priceUnit = getPriceUnit();
 
-  // Affichage adapté selon le type de bien
+  // Affichage adapté selon le type de bien (SANS SURFACE)
   const getBasicsContent = () => {
     const { basics, propertyType } = data;
     
@@ -100,12 +106,6 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
             <div className="text-xs sm:text-sm text-gray-500">Salles de réunion</div>
             <div className="font-bold text-sm sm:text-base">{basics.meetingRooms || 0}</div>
           </div>
-          {basics.size && (
-            <div>
-              <div className="text-xs sm:text-sm text-gray-500">Superficie</div>
-              <div className="font-bold text-sm sm:text-base">{basics.size}m²</div>
-            </div>
-          )}
           <div>
             <div className="text-xs sm:text-sm text-gray-500">Réception</div>
             <div className="font-bold text-sm sm:text-base">{basics.hasReception ? 'Oui' : 'Non'}</div>
@@ -125,12 +125,6 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
             <div className="text-xs sm:text-sm text-gray-500">Places parking</div>
             <div className="font-bold text-sm sm:text-base">{basics.parkingSpots || 0}</div>
           </div>
-          {basics.size && (
-            <div>
-              <div className="text-xs sm:text-sm text-gray-500">Superficie</div>
-              <div className="font-bold text-sm sm:text-base">{basics.size}m²</div>
-            </div>
-          )}
           <div>
             <div className="text-xs sm:text-sm text-gray-500">Cuisine</div>
             <div className="font-bold text-sm sm:text-base">{basics.kitchenAvailable ? 'Oui' : 'Non'}</div>
@@ -227,7 +221,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
       )
     });
 
-    // Section Caractéristiques
+    // Section Caractéristiques (SANS SURFACE)
     sections.push({
       id: 3,
       title: 'Caractéristiques',
@@ -330,17 +324,6 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
 
   const handleEdit = (stepNumber: number) => {
     onEdit(stepNumber);
-  };
-
-  const handlePublish = async () => {
-    if (isLoading) return;
-    
-    setIsSubmitting(true);
-    try {
-      await onSubmit();
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   return (
@@ -464,53 +447,86 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
               </ul>
             </div>
 
-            {/* Conditions */}
+            {/* Conditions de publication */}
             <div className="p-4 sm:p-6 border border-gray-200 rounded-xl sm:rounded-2xl bg-white">
-  <h4 className="font-bold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Conditions</h4>
-  
-  <div className="space-y-3 sm:space-y-4">
-    {/* Premier Label avec Liens */}
-    <label className="flex items-start gap-3 cursor-pointer group">
-      <input
-        type="checkbox"
-        className="mt-1 w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand flex-shrink-0 cursor-pointer"
-        required
-      />
-      <span className="text-xs sm:text-sm text-gray-700 leading-snug">
-        J'accepte les{" "}
-        <a 
-          href="/conditions" 
-          target="_blank" 
-          className="text-brand hover:underline font-semibold"
-          onClick={(e) => e.stopPropagation()}
-        >
-          conditions générales
-        </a>{" "}
-        et la{" "}
-        <a 
-          href="/confidentialite" 
-          target="_blank" 
-          className="text-brand hover:underline font-semibold"
-          onClick={(e) => e.stopPropagation()}
-        >
-          politique de confidentialité
-        </a>
-      </span>
-    </label>
+              <h4 className="font-bold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">
+                Conditions de publication
+              </h4>
+              
+              <div className="space-y-3 sm:space-y-4">
+                {/* Premier Label avec Liens */}
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => onTermsAcceptedChange(e.target.checked)}
+                    className="mt-1 w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand flex-shrink-0 cursor-pointer"
+                    required
+                  />
+                  <span className="text-xs sm:text-sm text-gray-700 leading-snug">
+                    J'accepte les{" "}
+                    <a 
+                      href="/conditions" 
+                      target="_blank" 
+                      className="text-brand hover:underline font-semibold"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      conditions générales
+                    </a>{" "}
+                    et la{" "}
+                    <a 
+                      href="/confidentialite" 
+                      target="_blank" 
+                      className="text-brand hover:underline font-semibold"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      politique de confidentialité
+                    </a>{" "}
+                    <span className="text-red-500 ml-1">*</span>
+                  </span>
+                </label>
 
-    {/* Deuxième Label : Certification */}
-    <label className="flex items-start gap-3 cursor-pointer">
-      <input
-        type="checkbox"
-        className="mt-1 w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand flex-shrink-0 cursor-pointer"
-        required
-      />
-      <span className="text-xs sm:text-sm text-gray-700 leading-snug">
-        Je certifie que les informations fournies sont exactes et sincères.
-      </span>
-    </label>
-  </div>
-</div>
+                {/* Deuxième Label : Certification */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={infoCertified}
+                    onChange={(e) => onInfoCertifiedChange(e.target.checked)}
+                    className="mt-1 w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand flex-shrink-0 cursor-pointer"
+                    required
+                  />
+                  <span className="text-xs sm:text-sm text-gray-700 leading-snug">
+                    Je certifie sur l'honneur que les informations fournies sont exactes et sincères.
+                    <span className="text-red-500 ml-1">*</span>
+                  </span>
+                </label>
+
+                {/* Message d'erreur si non cochés */}
+                {!(termsAccepted && infoCertified) && (
+                  <div className="mt-2 p-2 bg-red-50 border border-red-100 rounded text-xs text-red-600">
+                    ⚠️ Vous devez accepter toutes les conditions pour publier
+                  </div>
+                )}
+              </div>
+
+              {/* Indicateur de validation */}
+              <div className="mt-4 text-center text-xs text-gray-500">
+                {(termsAccepted && infoCertified) ? (
+                  <div className="flex items-center justify-center gap-1 text-green-600">
+                    <Check className="w-4 h-4" />
+                    Toutes les conditions sont remplies
+                  </div>
+                ) : (
+                  <div className="text-red-500">
+                    {!termsAccepted && !infoCertified 
+                      ? "2 conditions à accepter" 
+                      : !termsAccepted 
+                      ? "Conditions générales à accepter" 
+                      : "Certification des informations requise"}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
