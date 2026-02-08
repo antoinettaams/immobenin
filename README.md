@@ -1,36 +1,173 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+ImmoBénin - Plateforme d’Annonces Immobilières
+📋 À propos du projet
 
-## Getting Started
+ImmoBénin est une plateforme web moderne dédiée à la recherche, la publication et la gestion de biens immobiliers au Bénin. Les utilisateurs peuvent consulter des annonces, filtrer par ville, catégorie ou prix, et contacter directement les propriétaires ou agences.
 
-First, run the development server:
+Stack Technologique
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
+Framework : Next.js 16.1.1
+ (App Router)
+
+Langage : TypeScript 5.9.3
+
+Styling : Tailwind CSS 4 + PostCSS
+
+Animations : Framer Motion 12.26.1
+
+Formulaires : React Hook Form (si utilisé) + Zod
+
+Package Manager : pnpm ou npm
+
+Linting : ESLint 9 + eslint-config-next 16.1.1
+
+Base de données : Prisma 5.7.0
+
+🚀 Démarrage Rapide
+Prérequis
+
+Node.js 18+
+
+pnpm (recommandé) ou npm
+
+Installation
+# Cloner le projet
+git clone <repository-url>
+cd beninstay
+
+# Installer les dépendances
+pnpm install
+
+Lancer le serveur de développement
 pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Le site sera accessible sur http://localhost:3000
+ et se met à jour automatiquement lors de vos modifications.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+📁 Architecture du Projet
+beninstay/
+├── prisma/                  # Schéma Prisma et seed
+│   └── seed.ts
+├── src/
+│   ├── app/                 # Pages et layouts
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   └── globals.css
+│   └── components/
+│       ├── sections/
+│       │   ├── Header.tsx
+│       │   ├── Hero.tsx
+│       │   ├── Listings.tsx
+│       │   └── Filters.tsx
+│       └── ui/
+│           ├── button.tsx
+│           ├── card.tsx
+│           └── ...
+├── public/                  # Fichiers statiques et images
+│   ├── images/
+│   └── [roles]/
+├── package.json
+└── tsconfig.json
 
-## Learn More
+🔨 Scripts Disponibles
+Commande	Description
+pnpm dev	Lance le serveur de développement
+pnpm build	Génère Prisma + build pour production
+pnpm start	Lance le serveur de production
+pnpm lint	Vérifie le code avec ESLint
+pnpm prisma:seed	Initialise la base de données avec seed Prisma
+📝 Conventions de Code
 
-To learn more about Next.js, take a look at the following resources:
+Composants : PascalCase (Header.tsx)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Fichiers utilitaires : camelCase (utils.ts)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Types : utiliser interfaces pour objets et props
 
-## Deploy on Vercel
+Tailwind CSS : préférer les classes utilitaires au CSS custom
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Export par défaut pour tous les composants React
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+🌍 Navigation et Pages
+
+Accueil (/)
+
+Annonces (/annonces)
+
+Agences (/agences)
+
+À propos (/a-propos)
+
+Contact (/contact)
+
+📦 Dépendances Principales
+Package	Usage
+next	Framework React
+react, react-dom	Bibliothèque React
+@prisma/client	ORM pour base de données
+prisma	Gestion des migrations et seed
+framer-motion	Animations
+lucide-react	Icônes SVG
+react-hot-toast	Notifications
+react-icons	Icônes supplémentaires
+cloudinary	Gestion des images
+leaflet, @types/leaflet	Cartographie interactive
+@emailjs/browser	Envoi d’emails côté client
+🔐 Variables d’Environnement
+
+Créer un fichier .env.local :
+
+DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
+CLOUDINARY_URL="cloudinary://key:secret@cloudname"
+EMAILJS_PUBLIC_KEY=""
+EMAILJS_SERVICE_ID=""
+EMAILJS_TEMPLATE_ID=""
+
+🐛 Dépannage Courant
+
+Port 3000 déjà utilisé : pnpm dev -p 3001
+
+Cache Next.js : rm -rf .next && pnpm dev
+
+Dépendances cassées : rm -rf node_modules pnpm-lock.yaml && pnpm install
+
+🚀 Déploiement sur Hostinger
+Option Node.js (recommandé)
+pnpm build
+pnpm start
+
+
+Configurer le port fourni par Hostinger
+
+Node.js ≥ 18 requis
+
+Option hébergement mutualisé (statique)
+
+Modifier next.config.js :
+
+module.exports = {
+  output: "export",
+};
+
+
+Build statique : pnpm build
+
+Uploader le contenu du dossier out/ dans public_html/
+
+Note : Les fonctionnalités côté serveur (Prisma, API) ne fonctionneront pas sur statique.
+
+📚 Documentation
+
+Next.js 16
+
+Tailwind CSS 4
+
+Prisma
+
+Framer Motion
+
+📞 Contact et Support
+
+Pour toute question, consultez l’équipe ou les documentations officielles.
+
+Dernière mise à jour : Février 2026
