@@ -76,7 +76,7 @@ export const BeninFocus: React.FC = () => {
             aria-hidden="true"
           />
            
-           {/* Forme stylisée du Bénin (forme verticale abstraite) */}
+           {/* Forme stylisée du Bénin */}
            <div 
              className="relative w-48 h-[80%] bg-gray-700/50 rounded-[40px] border-2 border-dashed border-gray-600"
              aria-hidden="true"

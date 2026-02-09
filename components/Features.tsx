@@ -83,7 +83,7 @@ export const CategoriesSection: React.FC = () => {
       category: category.categoryType
     });
 
-    // Rediriger vers la page de recherche avec les paramètres
+    // Rediriger vers la page de recherche 
     router.push(`/search?${searchParams.toString()}`);
   };
 

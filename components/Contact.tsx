@@ -2,7 +2,7 @@
 import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import emailjs from '@emailjs/browser';
-import { Toaster, toast } from 'react-hot-toast'; // IMPORT TOAST
+import { Toaster, toast } from 'react-hot-toast';
 import {
   Phone,
   Mail,
@@ -11,7 +11,6 @@ import {
   Send,
   Facebook,
   Instagram, 
-  Music,
   CheckCircle,
   XCircle,
   Loader2
@@ -161,7 +160,7 @@ export const Contact: React.FC = () => {
 
   return (
     <>
-      {/* Toaster Component - Place it at the root */}
+      {/* Toaster Component */}
       <Toaster
         position="top-right"
         gutter={8}
@@ -347,7 +346,7 @@ export const Contact: React.FC = () => {
   );
 };
 
-/* ---------- Components (inchangés) ---------- */
+/* ---------- Components ---------- */
 
 interface InfoProps {
   icon: React.ElementType;
