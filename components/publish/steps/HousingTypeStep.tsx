@@ -92,7 +92,6 @@ export const HousingTypeStep: React.FC<HousingTypeStepProps> = ({
   const handleSubTypeSelect = (subTypeId: string) => {
     let privacyValue = selectedPrivacy;
 
-    // Airbnb-like : pas d’intimité pour bureau & événement
     if (selectedCategory !== "house") {
       privacyValue = "entire";
       setSelectedPrivacy("entire");

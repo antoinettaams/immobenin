@@ -23,15 +23,15 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   const [formData, setFormData] = useState<OnboardingData>(data)
   const [errors, setErrors] = useState<Partial<OnboardingData>>({})
   const [isLoading, setIsLoading] = useState(false)
-  const [phoneInput, setPhoneInput] = useState('') // Stockage séparé pour l'affichage
-
+  const [phoneInput, setPhoneInput] = useState('') 
+  
   // Initialisation depuis les props
   React.useEffect(() => {
     if (data.telephone) {
       // Extraire uniquement les chiffres sans le préfixe +229
       const digitsOnly = data.telephone.replace(/\D/g, '')
       if (digitsOnly.startsWith('229')) {
-        setPhoneInput(digitsOnly.slice(3)) // Enlève le 229
+        setPhoneInput(digitsOnly.slice(3))  
       } else {
         setPhoneInput(digitsOnly)
       }
@@ -110,7 +110,7 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
       const fullNumber = `+229${digits}`
       handleChange('telephone', fullNumber)
     } else {
-      // Si le numéro n'est pas complet, on stocke quand même
+      // Si le numéro n'est pas complet 
       handleChange('telephone', digits ? `+229${digits}` : '')
     }
   }

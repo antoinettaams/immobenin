@@ -10,8 +10,7 @@ import {
   SquareStack, 
   Car, 
   Clock, 
-  Sofa, 
-  DoorClosed,
+  Sofa,  
   Utensils
 } from "lucide-react";
 
@@ -23,8 +22,8 @@ export type BasicsData = {
   beds?: number;
   bathrooms?: number;
   privateEntrance?: boolean;
-  hasReception?: boolean; // Ajouté pour PublishFlow
-  kitchenAvailable?: boolean; // Ajouté pour PublishFlow
+  hasReception?: boolean; 
+  kitchenAvailable?: boolean; 
   
   // Pour bureau
   employees?: number;
@@ -97,7 +96,7 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
       defaultData.offices = defaultData.offices ?? 0;
       defaultData.workstations = defaultData.workstations ?? 0;
       defaultData.meetingRooms = defaultData.meetingRooms ?? 0;
-      defaultData.hasReception = defaultData.hasReception ?? false; // Ajouté
+      defaultData.hasReception = defaultData.hasReception ?? false;  
 
       // Réinitialiser champs non pertinents
       defaultData.maxGuests = undefined;
@@ -124,8 +123,8 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
       defaultData.hasSoundSystem = defaultData.hasSoundSystem ?? false;
       defaultData.hasProjector = defaultData.hasProjector ?? false;
       defaultData.wheelchairAccessible = defaultData.wheelchairAccessible ?? false;
-      defaultData.hasCatering = defaultData.hasCatering ?? false; // Ajouté
-      defaultData.kitchenAvailable = defaultData.kitchenAvailable ?? false; // Ajouté
+      defaultData.hasCatering = defaultData.hasCatering ?? false; 
+      defaultData.kitchenAvailable = defaultData.kitchenAvailable ?? false; 
 
       // Réinitialiser champs non pertinents
       defaultData.maxGuests = undefined;
@@ -162,18 +161,14 @@ export const BasicsStep: React.FC<BasicsStepProps> = ({
   const toggleBoolean = (field: keyof BasicsData) =>
     updateField(field, !(localData[field] as boolean));
 
-  // Dans BasicsStep.tsx, modifiez la fonction canContinue
-const canContinue = () => {
+ const canContinue = () => {
   switch (propertyCategory) {
     case "house":
       return (localData.maxGuests ?? 0) > 0 && (localData.beds ?? 0) > 0;
-      // Retirer: && (localData.size ?? 0) > 0
     case "office":
       return (localData.employees ?? 0) > 0;
-      // Retirer: && (localData.size ?? 0) > 0
     case "event":
       return (localData.eventCapacity ?? 0) > 0;
-      // Retirer: && (localData.size ?? 0) > 0
     default:
       return false;
   }

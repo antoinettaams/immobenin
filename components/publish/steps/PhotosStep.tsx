@@ -149,7 +149,7 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
     onNext();
   };
 
-  // Nettoyer les URLs blob quand le composant se démonte
+  // Nettoyer les URLs blob  
   React.useEffect(() => {
     return () => {
       if (typeof window !== 'undefined' && window.URL) {
@@ -428,7 +428,6 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
             {photos.length > 0 && (
               <button
                 onClick={() => {
-                  // Nettoyer toutes les URLs blob
                   if (typeof window !== 'undefined' && window.URL) {
                     photos.forEach(photo => {
                       if (photo.url && photo.url.startsWith('blob:')) {

@@ -47,7 +47,6 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       const isMobile = width < 768;
       
       if (isMobile) {
-        // Sur mobile, on réduit la hauteur quand le clavier est visible
         if (keyboardVisible) {
           setMapHeight(height * 0.3);
         } else {
@@ -67,7 +66,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
     const handleFocus = () => {
       if (window.innerWidth < 768) {
         setKeyboardVisible(true);
-        setTimeout(handleResize, 100); // Petit délai pour laisser le clavier s'ouvrir
+        setTimeout(handleResize, 100);  
       }
     };
 
@@ -108,7 +107,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   const handleAddressSubmit = () => {
     if (!address.trim()) return;
     setIsLoadingLocation(true);
-    setShowLocationButton(false); // Fermer le panneau de suggestions
+    setShowLocationButton(false);  
     
     // Simuler un délai pour la recherche
     setTimeout(() => {
@@ -153,7 +152,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
 
   const useCurrentLocation = () => {
     setIsLoadingLocation(true);
-    setShowLocationButton(false); // Fermer le panneau
+    setShowLocationButton(false);  
     
     if (!navigator.geolocation) {
       alert("Géolocalisation non supportée");
@@ -187,7 +186,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
 
   const switchToPinMode = () => {
     setSearchMode('pin');
-    setShowLocationButton(false); // Fermer le panneau si ouvert
+    setShowLocationButton(false); 
     setShowPinInstruction(true);
     setTimeout(() => setShowPinInstruction(false), 5000);
   };
@@ -198,7 +197,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       ref={containerRef}
       style={{ minHeight: keyboardVisible ? '100vh' : 'auto' }}
     >
-      {/* TITRE - Réduit sur mobile */}
+      {/* TITRE */}
       <div className="mb-4 sm:mb-8">
         <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
           Où est situé votre logement ?
@@ -208,7 +207,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
         </p>
       </div>
 
-      {/* BANDEAU INSTRUCTION - Optionnel sur mobile très petit */}
+      {/* BANDEAU INSTRUCTION */}
       <div className="mb-4 sm:mb-5">
         <div className="bg-blue-50 border border-blue-100 rounded-lg sm:rounded-xl p-2 sm:p-4">
           <div className="flex items-start gap-2 sm:gap-3">
@@ -284,7 +283,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
           )}
         </div>
 
-        {/* OVERLAY INSTRUCTION PIN - Position optimisée */}
+        {/* OVERLAY INSTRUCTION */}
         {showPinInstruction && searchMode === 'pin' && (
           <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-md z-10">
             <div className="bg-blue-600 text-white rounded-lg sm:rounded-xl shadow-lg p-2.5 sm:p-3 flex items-start gap-2 sm:gap-3">
@@ -302,7 +301,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
           </div>
         )}
 
-        {/* BOUTON PIN MANUEL - Taille réduite sur mobile */}
+        {/* BOUTON PIN MANUEL */}
         {searchMode === 'address' && !showLocationButton && (
           <button
             onClick={switchToPinMode}
@@ -313,7 +312,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
         )}
       </div>
 
-      {/* RÉSUMÉ FINAL - Optionnel sur mobile si peu d'espace */}
+      {/* RÉSUMÉ FINAL */}
       {(address || data.latitude) && !keyboardVisible && (
         <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-sm flex items-start gap-2 sm:gap-3">
           <div className="p-1.5 sm:p-2 bg-gray-100 rounded-lg shrink-0">

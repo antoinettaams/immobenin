@@ -22,7 +22,7 @@ export const PriceStep: React.FC<PriceStepProps> = ({
   onUpdate,
 }) => {
   const [price, setPrice] = useState(data.basePrice || 0);
-  const [timeUnit, setTimeUnit] = useState('nuit'); // Par défaut
+  const [timeUnit, setTimeUnit] = useState('nuit');  
 
   // Unités de temps disponibles selon le type de bien
   const getAvailableTimeUnits = () => {
@@ -60,7 +60,7 @@ export const PriceStep: React.FC<PriceStepProps> = ({
       currency: 'FCFA',
       weeklyDiscount: 0,
       monthlyDiscount: 0,
-      cleaningFee: 0, // Frais de nettoyage retirés
+      cleaningFee: 0, 
       extraGuestFee: 0,
       securityDeposit: 0
     });
@@ -89,14 +89,14 @@ export const PriceStep: React.FC<PriceStepProps> = ({
   const Icon = getCategoryIcon();
   const categoryLabel = getCategoryLabel();
 
-  // Calcul des frais de service (0%)
+  // Calcul des frais de service  
   const calculateServiceFee = (basePrice: number) => {
-    return 0; // Aucun frais de service
+    return 0;  
   };
 
-  // Prix total pour l'utilisateur (identique au prix de base)
+  // Prix total pour l'utilisateur 
   const calculateTotalPrice = (basePrice: number) => {
-    return basePrice; // Prix net = prix de base
+    return basePrice;  
   };
 
   return (
