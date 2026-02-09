@@ -5,7 +5,7 @@ import { Shield, Lock, FileText, HelpCircle, AlertTriangle, ChevronDown, CheckCi
 import Image from 'next/image';
 import Link from 'next/link';
 
-// Types pour les pages (au lieu de l'énum Page)
+// Types pour les pages
 export type FooterPageType = 
   | 'ABOUT' | 'CAREERS' | 'PRESS' | 'BLOG' 
   | 'HELP' | 'SECURITY' | 'CANCELLATION' | 'REPORT';

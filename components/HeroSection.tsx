@@ -25,7 +25,7 @@ export const Hero: React.FC = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center justify-center">
           
-          {/* Left Content - Centré sur mobile */}
+          {/* Left Content */}
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -105,7 +105,7 @@ export const Hero: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Right 3D Visual - Desktop only */}
+          {/* Right 3D Visual */}
           <motion.div 
             initial={{ opacity: 0, scale: 0.8, rotateY: 30 }}
             animate={{ opacity: 1, scale: 1, rotateY: 0 }}

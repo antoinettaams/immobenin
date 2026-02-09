@@ -15,10 +15,9 @@ export const Footer: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Fonction pour naviguer vers une page et scroller en haut
+  // Fonction pour naviguer vers une page 
   const navigateWithScroll = (path: string) => {
     router.push(path);
-    // Scroller en haut après un court délai
     setTimeout(scrollToTop, 50);
   };
 

@@ -47,7 +47,7 @@ export const Header: React.FC = () => {
       }`}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between relative">
-        {/* Logo avec Link pour navigation Next.js */}
+        {/* Logo */}
         <Link 
           href="/" 
           className="flex items-center gap-2 cursor-pointer group z-50"
@@ -118,7 +118,6 @@ export const Header: React.FC = () => {
           </Link>
         </nav>
 
-        {/* Right Section (User Menu on Desktop / Toggle on Mobile) */}
         <div className="flex items-center gap-2 z-50">
           {/* Desktop User Menu */}
           <div className="hidden md:flex items-center gap-2">

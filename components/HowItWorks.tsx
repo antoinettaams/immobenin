@@ -77,7 +77,7 @@ export const HowItWorks: React.FC = () => {
               aria-hidden="true"
             />
             
-            {/* Bouton "Je loue" */}
+            {/* Bouton */}
             <button 
               onClick={() => handleRoleToggle('tenant')}
               className={`relative z-10 px-6 md:px-8 py-2 md:py-3 rounded-full font-bold text-sm transition-colors w-[130px] md:w-[140px] ${
@@ -91,7 +91,7 @@ export const HowItWorks: React.FC = () => {
               Je loue
             </button>
             
-            {/* Bouton "Je suis hôte" */}
+            {/* Bouton */}
             <button 
               onClick={() => handleRoleToggle('host')}
               className={`relative z-10 px-6 md:px-8 py-2 md:py-3 rounded-full font-bold text-sm transition-colors w-[130px] md:w-[140px] ${
@@ -150,7 +150,7 @@ export const HowItWorks: React.FC = () => {
                     </div>
                   </motion.div>
                   
-                  {/* Numéro d'étape (accessibilité) */}
+                  {/* Numéro d'étape */}
                   <div 
                     className="sr-only"
                     aria-hidden="false"

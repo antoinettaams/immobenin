@@ -3,10 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Search as SearchIcon, Map, Wifi, Home, Users, 
-  Bath, Bed, X, Phone, Check, ChevronLeft, ChevronRight, 
-  Calendar, Clock, Image as ImageIcon, MapPin, 
-  Building, Maximize, Car, Wind, Coffee, 
-  Tv, Music, Projector, ChefHat, Bell, Shield, Key,
+  Bath, Bed, X, Phone, Check, ChevronLeft, ChevronRight, Clock, Image as ImageIcon, MapPin, 
+  Building, Maximize, Car, Wind, Music, Bell, Shield, Key,
   Accessibility,
   Droplets,
   ParkingCircle,
@@ -18,7 +16,6 @@ import {
   Briefcase,
   Printer,
   Sofa,
-  Waves,
   Presentation,
   GlassWater,
   Dumbbell,
@@ -214,7 +211,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
       img = images[0] || '';
     }
 
-    // Propriétaire avec tous les champs
+    // Utilisateur avec tous les champs
     const owner = {
       id: apiData.owner?.id,
       name: apiData.owner?.name || apiData.proprietaire?.nom || 'Propriétaire',
@@ -351,7 +348,6 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
   };
 
   // Composant pour afficher une image avec fallback
-  // Dans PropertyImageDisplay, ajoutez un état de chargement
 const PropertyImageDisplay = ({ 
   src, 
   alt, 
@@ -367,11 +363,11 @@ const PropertyImageDisplay = ({
 }) => {
   const [hasError, setHasError] = useState(false);
   const [imgSrc, setImgSrc] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true); // AJOUTÉ
+  const [isLoading, setIsLoading] = useState(true);  
 
   useEffect(() => {
     if (src && src.trim().length > 10) {
-      setIsLoading(true); // Commence le chargement
+      setIsLoading(true);  
       setHasError(false);
       
       let cleanedSrc = src.trim();
@@ -418,7 +414,7 @@ const PropertyImageDisplay = ({
     setIsLoading(false);
   };
 
-  // Pendant le chargement - Afficher un placeholder animé
+  // Pendant le chargement  
   if (isLoading) {
     return (
       <div className={`${className} bg-gray-200 flex items-center justify-center`}>
@@ -451,7 +447,7 @@ const PropertyImageDisplay = ({
       className={`${className} transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
       onLoad={() => setIsLoading(false)}
       onError={handleError}
-      loading="lazy"
+      loading="lazy" 
       crossOrigin="anonymous"
     />
   );
@@ -477,7 +473,7 @@ const PropertyImageDisplay = ({
       guests: initialGuests
     });
     
-    // Si on a des paramètres d'URL, on considère que c'est une recherche initiale
+    // Si on a des paramètres d'URL
     if (initialLocation || initialType || initialGuests) {
       setIsSearching(true);
       setHasInitialSearch(true);
@@ -654,7 +650,7 @@ const PropertyImageDisplay = ({
   };
 
   useEffect(() => {
-    if (hasInitialSearch) return; // Ne pas déclencher automatiquement après une recherche initiale
+    if (hasInitialSearch) return;
     
     if (location || propertyType || guests) {
       const timeoutId = setTimeout(() => {
@@ -766,10 +762,10 @@ const PropertyImageDisplay = ({
       exit={{ opacity: 0 }}
       className="min-h-screen bg-white"
     >
-      {/* Barre de recherche fixe en haut sur mobile */}
+      {/* Barre de recherche */}
       <div className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm z-40 border-b border-gray-200 md:hidden">
         <div className="container mx-auto px-4 py-3">
-          {/* Bouton Retour et Voir tout en ligne */}
+          {/* Bouton Retour */}
           <div className="flex items-center justify-between mb-3">
             <button 
               onClick={handleBackClick} 
@@ -791,7 +787,7 @@ const PropertyImageDisplay = ({
             )}
           </div>
           
-          {/* Barre de recherche mobile compacte */}
+          {/* Barre de recherche */}
           <div className="flex items-center gap-2 mb-2">
             <div className="flex-1">
               <input 
@@ -927,7 +923,7 @@ const PropertyImageDisplay = ({
                 </div>
               </div>
               
-              {/* Bouton Rechercher - version desktop */}
+              {/* Bouton Rechercher */}
               <button 
                 onClick={handleSearchSubmit}
                 className="hidden sm:flex bg-brand text-white p-3 rounded-full hover:bg-brand-dark transition-colors ml-2 items-center justify-center gap-2"
