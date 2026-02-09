@@ -127,7 +127,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [infoCertified, setInfoCertified] = useState(false)
   
-  // Références pour éviter les doublons - TOUS LES HOOKS ICI
+  // Références pour éviter les doublons 
   const draftToastShownRef = useRef(false)
   const errorToastShownRef = useRef<string>('')
   const isSubmittingRef = useRef(false)
@@ -429,7 +429,7 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
 
     setStepValidation(prev => ({ ...prev, isValid }))
     return isValid
-  }, [currentStep, listingData, termsAccepted, infoCertified]) // AJOUT: DEPENDANCES
+  }, [currentStep, listingData, termsAccepted, infoCertified])  
 
   // Mise à jour des données
   const updateData = useCallback(<K extends keyof ListingData>(section: K, data: ListingData[K]) => {
