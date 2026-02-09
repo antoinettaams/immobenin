@@ -9,7 +9,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // DÉBALLER LA PROMISE params AVEC await
     const { id } = await params;
     const propertyId = parseInt(id);
     
@@ -22,7 +21,6 @@ export async function GET(
 
     console.log(`🔍 Récupération bien ID: ${propertyId}`);
 
-    // REQUÊTE COMPLÈTE avec TOUS les champs SANS select restrictif
     const property = await prisma.bien.findUnique({
       where: { 
         id: propertyId,
@@ -119,7 +117,7 @@ export async function GET(
         
         const trimmed = img.trim();
         
-        // Exclure URLs blob (temporaires)
+        // Exclure URLs blob  
         if (trimmed.startsWith('blob:')) {
           return false;
         }
@@ -249,7 +247,7 @@ export async function GET(
         pourEvenement: e.equipement.pourEvenement,
       })),
       
-      // === Propriétaire (Utilisateur) ===
+      // === Utilisateur ===
       owner: {
         id: property.proprietaire.id,
         name: property.proprietaire.nom,
@@ -318,7 +316,6 @@ export async function GET(
   }
 }
 
-// OPTIONNEL: Endpoint PUT pour mettre à jour
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -342,7 +339,6 @@ export async function PUT(
         title: body.title,
         basePrice: body.price,
         isPublished: body.isPublished,
-        // Mettre à jour d'autres champs selon besoin
         city: body.city,
         address: body.address,
         size: body.size,
@@ -351,7 +347,6 @@ export async function PUT(
         maxGuests: body.maxGuests,
         employees: body.employees,
         eventCapacity: body.eventCapacity,
-        // ... autres champs
       }
     });
     
@@ -375,7 +370,6 @@ export async function PUT(
   }
 }
 
-// OPTIONNEL: Endpoint DELETE pour supprimer
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

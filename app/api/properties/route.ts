@@ -1,4 +1,4 @@
-// app/api/properties/route.ts - VERSION CORRIGÉE
+// app/api/properties/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
@@ -63,10 +63,9 @@ export async function GET(request: NextRequest) {
 
     console.log('📋 Filtres Prisma:', JSON.stringify(where, null, 2));
 
-    // CORRECTION SYNTAXE : Votre include a une erreur de syntaxe
     const properties = await prisma.bien.findMany({
       where,
-      // INCLURE TOUTES LES RELATIONS - SYNTAXE CORRECTE
+      // INCLURE TOUTES LES RELATIONS 
       include: {
         description: true,
         proprietaire: true,
@@ -75,7 +74,7 @@ export async function GET(request: NextRequest) {
             equipement: true
           }
         }
-      }, // <-- ACCOLADE FERMANTE CORRECTE
+      }, 
       take: parseInt(limit),
       skip: parseInt(offset),
       orderBy: {
@@ -89,7 +88,6 @@ export async function GET(request: NextRequest) {
     const formattedProperties = properties.map(property => {
       console.log(`🔍 Traitement du bien ${property.id}: ${property.title}`);
 
-      // VÉRIFICATION: Maintenant vous avez accès à tous les champs
       console.log('   ✅ maxGuests:', property.maxGuests);
       console.log('   ✅ employees:', property.employees);
       console.log('   ✅ eventCapacity:', property.eventCapacity);
@@ -189,7 +187,7 @@ export async function GET(request: NextRequest) {
         ? cleanImages 
         : ['https://via.placeholder.com/800x600/cccccc/969696?text=Immobilier+B%C3%A9nin'];
 
-      // FORMATION DE L'OBJET COMPLET - CORRECTION hasCatering
+      // FORMATION DE L'OBJET COMPLET  
       const formattedProperty = {
         // === Tous les champs de Bien ===
         id: property.id,
@@ -231,8 +229,7 @@ export async function GET(request: NextRequest) {
         hasStage: property.hasStage || false,
         hasSoundSystem: property.hasSoundSystem || false,
         hasProjector: property.hasProjector || false,
-        // CORRECTION hasCatering :
-        hasCatering: (property as any).hasCatering || false, // <-- CORRECTION ICI
+        hasCatering: (property as any).hasCatering || false, 
         minBookingHours: property.minBookingHours,
         
         // TitleStep
@@ -259,7 +256,7 @@ export async function GET(request: NextRequest) {
         // Statut
         isPublished: property.isPublished,
         
-        // === DescriptionStep (relation) ===
+        // === DescriptionStep ===
         description: property.description ? {
           summary: property.description.summary,
           spaceDescription: property.description.spaceDescription,
@@ -268,7 +265,7 @@ export async function GET(request: NextRequest) {
           createdAt: property.description.createdAt.toISOString(),
         } : null,
         
-        // === Propriétaire (Utilisateur) ===
+        // === Utilisateur ===
         owner: {
           id: property.proprietaire.id,
           name: property.proprietaire.nom,
@@ -276,7 +273,7 @@ export async function GET(request: NextRequest) {
           email: property.proprietaire.email,
         },
         
-        // === AmenitiesStep (équipements) ===
+        // === AmenitiesStep ===
         amenities: amenities,
         amenitiesDetails: property.equipements.map(e => ({
           id: e.equipement.id,
@@ -338,7 +335,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Endpoint POST corrigé
+// Endpoint POST 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -353,7 +350,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Créer l'objet de données avec moins de champs problématiques
+    // Créer l'objet de données 
     const createData: any = {
       // Tous les champs de Bien
       title: body.title,
@@ -369,7 +366,7 @@ export async function POST(request: NextRequest) {
       latitude: body.latitude,
       longitude: body.longitude,
       
-      // BasicsStep - seulement les champs sûrs
+      // BasicsStep
       size: body.size,
       floors: body.floors,
       maxGuests: body.maxGuests,
@@ -384,7 +381,6 @@ export async function POST(request: NextRequest) {
       eventCapacity: body.eventCapacity,
       parkingSpots: body.parkingSpots,
       wheelchairAccessible: body.wheelchairAccessible,
-      // COMMENTEZ les champs problématiques TEMPORAIREMENT
       // hasStage: body.hasStage,
       // hasSoundSystem: body.hasSoundSystem,
       // hasProjector: body.hasProjector,
@@ -427,7 +423,6 @@ export async function POST(request: NextRequest) {
       }
     };
     
-    // Utiliser le bon nom de modèle: Utilisateur, pas proprietaire
     const newProperty = await prisma.bien.create({
       data: createData
     });

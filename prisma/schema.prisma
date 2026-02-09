@@ -46,6 +46,7 @@ model Bien {
   parkingSpots         Int?
   wheelchairAccessible Boolean?         @default(false)
   hasStage             Boolean?         @default(false)
+  hasCatering          Boolean?         @default(false)
   hasSoundSystem       Boolean?         @default(false)
   hasProjector         Boolean?         @default(false)
   minBookingHours      Int?

@@ -11,7 +11,7 @@ import { StickyNav } from '@/components/Navbar';
 export default function HomePage() {
   return (
     <main className="min-h-screen">
-      <Header /> {/* Changé de StickyNav à Header */}
+      <Header /> 
       <Hero />
       <CategoriesSection />
       <ValuePropSection />

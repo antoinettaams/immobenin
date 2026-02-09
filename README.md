@@ -14,8 +14,6 @@ Styling : Tailwind CSS 4 + PostCSS
 
 Animations : Framer Motion 12.26.1
 
-Formulaires : React Hook Form (si utilisé) + Zod
-
 Package Manager : pnpm ou npm
 
 Linting : ESLint 9 + eslint-config-next 16.1.1
@@ -59,10 +57,7 @@ beninstay/
 │       │   ├── Hero.tsx
 │       │   ├── Listings.tsx
 │       │   └── Filters.tsx
-│       └── ui/
-│           ├── button.tsx
-│           ├── card.tsx
-│           └── ...
+│       └── ....
 ├── public/                  # Fichiers statiques et images
 │   ├── images/
 │   └── [roles]/

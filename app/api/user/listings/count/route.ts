@@ -1,10 +1,10 @@
-// app/api/user/listings/count/route.ts - CORRIGÉ
+// app/api/user/listings/count/route.ts
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
 export async function GET(request: Request) {
   try {
-    // Récupérer l'email depuis les query params
+    // Récupérer l'email 
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
     
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       }, { status: 400 })
     }
     
-    // D'abord, trouver l'utilisateur
+    // Retrouver l'utilisateur
     const utilisateur = await prisma.utilisateur.findUnique({
       where: { email },
       select: { id: true, email: true, nom: true }
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
       })
     }
     
-    // Compter les annonces de l'utilisateur
+    // Si il existe compter les annonces de l'utilisateur
     const count = await prisma.bien.count({
       where: {
         proprietaireId: utilisateur.id
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
         success: false,
         count: 0,
         error: 'Erreur lors de la vérification',
-        canPublish: true // En cas d'erreur, on laisse publier
+        canPublish: true
       },
       { status: 500 }
     )

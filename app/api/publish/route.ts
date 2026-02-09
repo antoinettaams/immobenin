@@ -1,11 +1,11 @@
-// app/api/publish/route.ts - COMPLÈTE AVEC VÉRIFICATION DE LIMITE
+// app/api/publish/route.ts 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-// CONSTANTE DE LIMITE - AJOUTÉE
+// CONSTANTE DE LIMITE 
 const MAX_LISTINGS_PER_USER = 5
 
 // Fonction pour vérifier la configuration Cloudinary
@@ -24,7 +24,7 @@ function isCloudinaryConfigured(): boolean {
   return hasConfig;
 }
 
-// Fonction d'upload améliorée avec gestion des erreurs
+// Fonction d'upload
 async function uploadImage(file: File, index: number, bienId?: string): Promise<string> {
   try {
     console.log(`📤 Traitement image ${index + 1}:`, {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     const dataString = formData.get('data') as string;
     const data = JSON.parse(dataString);
     
-    // ============ VÉRIFICATION DE LA LIMITE - SECTION AJOUTÉE ============
+    // ============ VÉRIFICATION DE LA LIMITE ============
     const ownerEmail = data.onboarding?.email;
     if (ownerEmail) {
       console.log(`🔍 Vérification limite pour: ${ownerEmail}`);
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         
         let count = 0;
         if (utilisateur) {
-          // Compter les annonces de l'utilisateur
+          // S'il existe compter les annonces de l'utilisateur
           count = await prisma.bien.count({
             where: {
               proprietaireId: utilisateur.id
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
     
     console.log('📤 Photos reçues (brutes):', photoEntries.length);
     
-    // SOLUTION ALTERNATIVE PLUS SÛRE
+    // SOLUTION ALTERNATIVE 
     for (let i = 0; i < photoEntries.length; i++) {
       const entry = photoEntries[i];
       const entryAny = entry as any;
