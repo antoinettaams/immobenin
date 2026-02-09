@@ -1,4 +1,4 @@
-// lib/cloudinary.ts - CORRIGÉ COMPLET
+// lib/cloudinary.ts 
 import { v2 as cloudinary } from 'cloudinary';
 
 // Configuration Cloudinary
@@ -15,7 +15,6 @@ function generateUniqueFilename(originalName?: string, options?: { bienId?: stri
   const randomStr = Math.random().toString(36).substring(2, 9);
   
   if (options?.bienId && options.index !== undefined) {
-    // Format organisé: bien_{id}_img{index}_{timestamp}
     return `bien_${options.bienId}_img${options.index + 1}_${timestamp}`;
   }
   
@@ -57,8 +56,8 @@ export async function uploadBufferToCloudinary(
         overwrite: false,
         use_filename: false,
         transformation: [
-          { width: 1600, crop: "limit" }, // Largeur max 1600px
-          { quality: "auto:good" } // Qualité optimisée
+          { width: 1600, crop: "limit" },
+          { quality: "auto:good" } 
         ],
         context: `filename=${filename || 'upload'}|bienId=${bienId || 'unknown'}`
       },
@@ -85,7 +84,7 @@ export async function uploadBufferToCloudinary(
   });
 }
 
-// Fonction pour supprimer une image (optionnel)
+// Fonction pour supprimer une image  
 export async function deleteCloudinaryImage(publicId: string): Promise<boolean> {
   try {
     const result = await cloudinary.uploader.destroy(publicId);
@@ -97,7 +96,7 @@ export async function deleteCloudinaryImage(publicId: string): Promise<boolean> 
   }
 }
 
-// Fonction pour lister les images d'un bien (optionnel)
+// Fonction pour lister les images d'un bien  
 export async function listBienImages(bienId: string) {
   try {
     const result = await cloudinary.search
