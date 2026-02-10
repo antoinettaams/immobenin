@@ -68,7 +68,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
 
   const priceUnit = getPriceUnit();
 
-  // Affichage adapté selon le type de bien (SANS SURFACE)
+  // Affichage adapté selon le type de bien 
   const getBasicsContent = () => {
     const { basics, propertyType } = data;
     
@@ -182,7 +182,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
     const { propertyType } = data;
     const sections = [];
 
-    // Section Type (toujours présente)
+    // Section Type 
     sections.push({
       id: 0,
       title: 'Informations de contact',
@@ -221,7 +221,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
       )
     });
 
-    // Section Caractéristiques (SANS SURFACE)
+    // Section Caractéristiques 
     sections.push({
       id: 3,
       title: 'Caractéristiques',
@@ -467,7 +467,6 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                     J'accepte les{" "}
                     <a 
                       href="/conditions" 
-                      target="_blank" 
                       className="text-brand hover:underline font-semibold"
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -476,7 +475,6 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                     et la{" "}
                     <a 
                       href="/confidentialite" 
-                      target="_blank" 
                       className="text-brand hover:underline font-semibold"
                       onClick={(e) => e.stopPropagation()}
                     >

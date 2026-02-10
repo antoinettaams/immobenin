@@ -10,7 +10,7 @@ import { HousingTypeStep } from './steps/HousingTypeStep'
 import { LocationStep } from './steps/LocationStep'
 import { BasicsStep, type BasicsData } from './steps/BasicsStep'
 import { AmenitiesStep } from './steps/AmenitiesStep'
-import { PhotosStep } from './steps/PhotosStep'
+import { PhotosStep } from './steps/PhotosStep' 
 import { TitleStep } from './steps/TitleStep'
 import { DescriptionStep } from './steps/DescriptionStep'
 import { PriceStep } from './steps/PriceStep'
@@ -600,202 +600,323 @@ export const PublishFlow: React.FC<PublishFlowProps> = ({ onComplete }) => {
 
   // Fonction pour publier
   const handlePublish = async () => {
-    console.log('🚀 HANDLEPUBLISH - Début')
-    
-    // Empêcher double soumission
-    if (isSubmittingRef.current) {
-      console.log('⚠️ Publication déjà en cours, ignorer')
-      return
-    }
-    
-    if (stepValidation.isLoading) {
-      return
-    }
+  console.log('🚀 HANDLEPUBLISH - Début')
+  
+  // DEBUG: Vérifier ce qui est dans listingData.photos
+  console.log('📸 DEBUG - Photos dans listingData avant publication:');
+  listingData.photos.forEach((photo, index) => {
+    console.log(`  Photo ${index}:`, {
+      id: photo.id,
+      hasFile: !!photo.file,
+      fileType: photo.file?.type,
+      fileSize: photo.file?.size,
+      isFileInstance: photo.file instanceof File,
+      url: photo.url?.substring(0, 50) + '...',
+      urlType: photo.url?.substring(0, 20)
+    });
+  });
 
-    isSubmittingRef.current = true
-    setStepValidation(prev => ({ ...prev, isLoading: true }))
-    setPublishError(null)
+  // Empêcher double soumission
+  if (isSubmittingRef.current) {
+    console.log('⚠️ Publication déjà en cours, ignorer')
+    return
+  }
+  
+  if (stepValidation.isLoading) {
+    return
+  }
 
-    // Vérifier la limite avant publication
-    try {
-      const ownerEmail = listingData.owner.email
-      if (ownerEmail && ownerEmail.trim() !== '') {
-        const response = await fetch(`/api/user/listings/count?email=${encodeURIComponent(ownerEmail)}`)
-        const data = await response.json()
-        
-        if (data.success && !data.canPublish) {
-          toast.error(
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <span className="font-semibold">Limite atteinte</span>
-              </div>
-              <p className="text-sm">
-                Vous avez déjà {data.count} annonces sur {data.limit} autorisées.
-                Veuillez contacter le support pour augmenter votre limite.
-              </p>
-            </div>,
-            {
-              duration: 7000,
-              style: {
-                background: '#FEF2F2',
-                color: '#DC2626',
-                border: '1px solid #FECACA',
-              }
+  isSubmittingRef.current = true
+  setStepValidation(prev => ({ ...prev, isLoading: true }))
+  setPublishError(null)
+
+  // Vérifier la limite avant publication
+  try {
+    const ownerEmail = listingData.owner.email
+    if (ownerEmail && ownerEmail.trim() !== '') {
+      const response = await fetch(`/api/user/listings/count?email=${encodeURIComponent(ownerEmail)}`)
+      const data = await response.json()
+      
+      if (data.success && !data.canPublish) {
+        toast.error(
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <span className="font-semibold">Limite atteinte</span>
+            </div>
+            <p className="text-sm">
+              Vous avez déjà {data.count} annonces sur {data.limit} autorisées.
+              Veuillez contacter le support pour augmenter votre limite.
+            </p>
+          </div>,
+          {
+            duration: 7000,
+            style: {
+              background: '#FEF2F2',
+              color: '#DC2626',
+              border: '1px solid #FECACA',
             }
-          )
-          isSubmittingRef.current = false
-          setStepValidation(prev => ({ ...prev, isLoading: false }))
-          return
-        }
+          }
+        )
+        isSubmittingRef.current = false
+        setStepValidation(prev => ({ ...prev, isLoading: false }))
+        return
       }
-    } catch (error) {
-      console.log('Erreur vérification limite, continue:', error)
+    }
+  } catch (error) {
+    console.log('Erreur vérification limite, continue:', error)
+  }
+
+  const loadingToast = toast.loading(
+    <div className="flex items-center gap-2">
+      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <span>Publication en cours...</span>
+    </div>,
+    {
+      duration: Infinity,
+      style: {
+        background: '#F0F9FF',
+        color: '#0369A1',
+        border: '1px solid #BAE6FD',
+      },
+    }
+  )
+
+  try {
+    const formData = new FormData()
+
+    const prismaData = {
+      onboarding: listingData.owner,
+      housingType: {
+        category: listingData.propertyType.category.toUpperCase(),
+        subType: listingData.propertyType.subType,
+        privacy: listingData.propertyType.privacy.toUpperCase()
+      },
+      location: listingData.location,
+      basics: listingData.basics,
+      amenities: listingData.amenities,
+      title: listingData.title,
+      description: listingData.description,
+      price: {
+        basePrice: Number(listingData.pricing.basePrice),
+        currency: listingData.pricing.currency,
+        weeklyDiscount: Number(listingData.pricing.weeklyDiscount),
+        monthlyDiscount: Number(listingData.pricing.monthlyDiscount),
+        cleaningFee: Number(listingData.pricing.cleaningFee),
+        extraGuestFee: Number(listingData.pricing.extraGuestFee),
+        securityDeposit: Number(listingData.pricing.securityDeposit)
+      },
+      rules: {
+        checkInTime: listingData.rules.checkInTime,
+        checkOutTime: listingData.rules.checkOutTime,
+        childrenAllowed: listingData.rules.childrenAllowed
+      }
     }
 
-    const loadingToast = toast.loading(
-      <div className="flex items-center gap-2">
-        <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <span>Publication en cours...</span>
+    formData.append("data", JSON.stringify(prismaData))
+
+    // === NOUVELLE SOLUTION : Gérer les photos différemment ===
+    console.log('📸 Préparation des photos pour envoi:');
+    
+    const photosToSend = listingData.photos;
+    let filesSent = 0;
+    let blobsSent = 0;
+    let base64Sent = 0;
+    let urlsSent = 0;
+    let errors = 0;
+
+    // Créer un tableau pour suivre les promesses d'upload
+    const uploadPromises: Promise<void>[] = [];
+
+    for (let i = 0; i < photosToSend.length; i++) {
+      const photo = photosToSend[i];
+      const uploadPromise = (async () => {
+        try {
+          // CAS 1: Photo a un objet File valide (idéal)
+          if (photo.file && photo.file instanceof File) {
+            console.log(`📤 Photo ${i + 1}: Envoi File direct (${photo.file.name}, ${photo.file.size} bytes)`);
+            formData.append("photos", photo.file);
+            filesSent++;
+          }
+          // CAS 2: URL blob (image récemment uploadée)
+          else if (photo.url && photo.url.startsWith('blob:')) {
+            try {
+              console.log(`📤 Photo ${i + 1}: Conversion blob en File...`);
+              const response = await fetch(photo.url);
+              if (!response.ok) throw new Error('Fetch failed');
+              
+              const blob = await response.blob();
+              if (blob.size === 0) throw new Error('Blob vide');
+              
+              const file = new File([blob], `photo_${i + 1}.jpg`, { 
+                type: blob.type || 'image/jpeg' 
+              });
+              
+              formData.append("photos", file);
+              console.log(`✅ Photo ${i + 1}: Blob converti (${blob.size} bytes)`);
+              blobsSent++;
+            } catch (blobError: any) {
+              console.error(`❌ Photo ${i + 1} blob error:`, blobError.message);
+              errors++;
+            }
+          }
+          // CAS 3: Data URL (base64)
+          else if (photo.url && photo.url.startsWith('data:')) {
+            try {
+              console.log(`📤 Photo ${i + 1}: Traitement base64...`);
+              const base64Data = photo.url.split(',')[1];
+              if (!base64Data) throw new Error('Données base64 manquantes');
+              
+              const byteCharacters = atob(base64Data);
+              const byteNumbers = new Array(byteCharacters.length);
+              
+              for (let j = 0; j < byteCharacters.length; j++) {
+                byteNumbers[j] = byteCharacters.charCodeAt(j);
+              }
+              
+              const byteArray = new Uint8Array(byteNumbers);
+              const blob = new Blob([byteArray], { type: 'image/jpeg' });
+              const file = new File([blob], `photo_${i + 1}.jpg`, { type: 'image/jpeg' });
+              
+              formData.append("photos", file);
+              console.log(`✅ Photo ${i + 1}: Base64 converti (${byteArray.length} bytes)`);
+              base64Sent++;
+            } catch (base64Error: any) {
+              console.error(`❌ Photo ${i + 1} base64 error:`, base64Error.message);
+              errors++;
+            }
+          }
+          // CAS 4: URL normale (déjà uploadée)
+          else if (photo.url && (photo.url.startsWith('http') || photo.url.startsWith('https'))) {
+            console.log(`📤 Photo ${i + 1}: Envoi URL directe`);
+            formData.append("photos", photo.url);
+            urlsSent++;
+          }
+          // CAS 5: Aucune donnée valide
+          else {
+            console.warn(`⚠️ Photo ${i + 1}: Aucune donnée valide - ignorée`);
+            errors++;
+          }
+        } catch (error: any) {
+          console.error(`❌ Photo ${i + 1} erreur générale:`, error.message);
+          errors++;
+        }
+      })();
+
+      uploadPromises.push(uploadPromise);
+    }
+
+    // Attendre que tous les uploads soient traités
+    await Promise.all(uploadPromises);
+
+    console.log(`📊 RÉSUMÉ PHOTOS:`);
+    console.log(`✅ Files envoyés: ${filesSent}`);
+    console.log(`✅ Blobs convertis: ${blobsSent}`);
+    console.log(`✅ Base64 convertis: ${base64Sent}`);
+    console.log(`✅ URLs directes: ${urlsSent}`);
+    console.log(`❌ Erreurs: ${errors}`);
+    console.log(`📤 Total envoyées: ${filesSent + blobsSent + base64Sent + urlsSent} sur ${photosToSend.length}`);
+
+    // Si aucune photo n'a été envoyée
+    if (filesSent + blobsSent + base64Sent + urlsSent === 0 && photosToSend.length > 0) {
+      console.warn('⚠️ Aucune photo envoyée, tentative de récupération des Files depuis PhotosStep...');
+      
+      // Dernière tentative: vérifier si on peut récupérer les photos depuis PhotosStep
+      // (vous devrez peut-être passer photosWithFiles en prop ou context)
+    }
+    // === FIN DE LA NOUVELLE SOLUTION ===
+
+    console.log('📦 Envoi du formulaire à l\'API...');
+    
+    const response = await fetch("/api/publish", {
+      method: "POST",
+      body: formData
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      if (result.error?.includes('Limite atteinte') || result.limitReached) {
+        throw new Error(
+          `LIMITE ATTEINTE: Vous avez déjà ${result.currentCount || 5} annonces. ` +
+          `La limite est de ${result.maxLimit || 5} annonces par propriétaire.`
+        )
+      }
+      throw new Error(result.error || 'Erreur lors de la publication')
+    }
+
+    // Effacer le brouillon après publication réussie
+    localStorage.removeItem('draft_listing')
+    localStorage.removeItem('draft_current_step')
+    localStorage.removeItem('draft_saved_at')
+    
+    // Réinitialiser les refs
+    draftToastShownRef.current = false
+    errorToastShownRef.current = ''
+
+    toast.success(
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <span className="font-semibold">Publication réussie !</span>
+        </div>
+        <p className="text-sm text-green-600">Votre annonce est maintenant visible sur ImmoBenin.</p>
       </div>,
       {
-        duration: Infinity,
+        id: loadingToast,
+        duration: 5000,
         style: {
-          background: '#F0F9FF',
-          color: '#0369A1',
-          border: '1px solid #BAE6FD',
+          background: '#F0FDF4',
+          color: '#166534',
+          border: '1px solid #BBF7D0',
         },
       }
     )
 
-    try {
-      const formData = new FormData()
+    setTimeout(() => {
+      window.location.href = "/?published=true"
+    }, 2000)
 
-      const prismaData = {
-        onboarding: listingData.owner,
-        housingType: {
-          category: listingData.propertyType.category.toUpperCase(),
-          subType: listingData.propertyType.subType,
-          privacy: listingData.propertyType.privacy.toUpperCase()
-        },
-        location: listingData.location,
-        basics: listingData.basics,
-        amenities: listingData.amenities,
-        title: listingData.title,
-        description: listingData.description,
-        price: {
-          basePrice: Number(listingData.pricing.basePrice),
-          currency: listingData.pricing.currency,
-          weeklyDiscount: Number(listingData.pricing.weeklyDiscount),
-          monthlyDiscount: Number(listingData.pricing.monthlyDiscount),
-          cleaningFee: Number(listingData.pricing.cleaningFee),
-          extraGuestFee: Number(listingData.pricing.extraGuestFee),
-          securityDeposit: Number(listingData.pricing.securityDeposit)
-        },
-        rules: {
-          checkInTime: listingData.rules.checkInTime,
-          checkOutTime: listingData.rules.checkOutTime,
-          childrenAllowed: listingData.rules.childrenAllowed
-        }
-      }
-
-      formData.append("data", JSON.stringify(prismaData))
-
-      listingData.photos.forEach((photo) => {
-        if (photo.file) {
-          formData.append("photos", photo.file)
-        }
-      })
-
-      const response = await fetch("/api/publish", {
-        method: "POST",
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        if (result.error?.includes('Limite atteinte') || result.limitReached) {
-          throw new Error(
-            `LIMITE ATTEINTE: Vous avez déjà ${result.currentCount || 5} annonces. ` +
-            `La limite est de ${result.maxLimit || 5} annonces par propriétaire.`
-          )
-        }
-        throw new Error(result.error || 'Erreur lors de la publication')
-      }
-
-      // Effacer le brouillon après publication réussie
-      localStorage.removeItem('draft_listing')
-      localStorage.removeItem('draft_current_step')
-      localStorage.removeItem('draft_saved_at')
-      
-      // Réinitialiser les refs
-      draftToastShownRef.current = false
-      errorToastShownRef.current = ''
-
-      toast.success(
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <span className="font-semibold">Publication réussie !</span>
-          </div>
-          <p className="text-sm text-green-600">Votre annonce est maintenant visible sur ImmoBenin.</p>
-        </div>,
-        {
-          id: loadingToast,
-          duration: 5000,
-          style: {
-            background: '#F0FDF4',
-            color: '#166534',
-            border: '1px solid #BBF7D0',
-          },
-        }
-      )
-
-      setTimeout(() => {
-        window.location.href = "/?published=true"
-      }, 2000)
-
-    } catch (e: any) {
-      console.error('❌ Erreur:', e)
-      setPublishError(e.message)
-      
-      let errorMessage = e.message
-      let duration = 7000
-      
-      if (e.message.includes('LIMITE ATTEINTE')) {
-        errorMessage = e.message.replace('LIMITE ATTEINTE: ', '')
-        duration = 10000
-      }
-      
-      toast.error(
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <span className="font-semibold">Erreur de publication</span>
-          </div>
-          <p className="text-sm text-red-600">{errorMessage || "Une erreur est survenue. Veuillez réessayer."}</p>
-        </div>,
-        {
-          id: loadingToast,
-          duration: duration,
-        }
-      )
-    } finally {
-      isSubmittingRef.current = false
-      setStepValidation(prev => ({ ...prev, isLoading: false }))
+  } catch (e: any) {
+    console.error('❌ Erreur:', e)
+    setPublishError(e.message)
+    
+    let errorMessage = e.message
+    let duration = 7000
+    
+    if (e.message.includes('LIMITE ATTEINTE')) {
+      errorMessage = e.message.replace('LIMITE ATTEINTE: ', '')
+      duration = 10000
     }
+    
+    toast.error(
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <span className="font-semibold">Erreur de publication</span>
+        </div>
+        <p className="text-sm text-red-600">{errorMessage || "Une erreur est survenue. Veuillez réessayer."}</p>
+      </div>,
+      {
+        id: loadingToast,
+        duration: duration,
+      }
+    )
+  } finally {
+    isSubmittingRef.current = false
+    setStepValidation(prev => ({ ...prev, isLoading: false }))
   }
+}
 
   // Rendu de l'étape actuelle
   const renderStep = () => {

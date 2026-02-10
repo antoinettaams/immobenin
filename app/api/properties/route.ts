@@ -1,9 +1,8 @@
-// app/api/properties/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,9 +62,9 @@ export async function GET(request: NextRequest) {
 
     console.log('📋 Filtres Prisma:', JSON.stringify(where, null, 2));
 
+    // Récupérer les propriétés
     const properties = await prisma.bien.findMany({
       where,
-      // INCLURE TOUTES LES RELATIONS 
       include: {
         description: true,
         proprietaire: true,
@@ -86,14 +85,31 @@ export async function GET(request: NextRequest) {
 
     // Formater la réponse
     const formattedProperties = properties.map(property => {
-      console.log(`🔍 Traitement du bien ${property.id}: ${property.title}`);
-
-      console.log('   ✅ maxGuests:', property.maxGuests);
-      console.log('   ✅ employees:', property.employees);
-      console.log('   ✅ eventCapacity:', property.eventCapacity);
-      console.log('   ✅ bedrooms:', property.bedrooms);
-      console.log('   ✅ bathrooms:', property.bathrooms);
-      console.log('   ✅ floors:', property.floors);
+      console.log(`\n🔍 Traitement du bien ${property.id}: "${property.title}"`);
+      
+      // LOG COMPLET POUR DÉBOGUAGE
+      console.log('📊 STRUCTURE BRUTE DU BIEN:');
+      console.log(JSON.stringify({
+        id: property.id,
+        title: property.title,
+        beds: property.beds,
+        offices: property.offices,
+        meetingRooms: property.meetingRooms,
+        workstations: property.workstations,
+        basePrice: property.basePrice,
+        hasStage: property.hasStage,
+        hasSoundSystem: property.hasSoundSystem,
+        hasProjector: property.hasProjector,
+        hasCatering: property.hasCatering,
+        postalCode: property.postalCode,
+        latitude: property.latitude,
+        longitude: property.longitude,
+        weeklyDiscount: property.weeklyDiscount,
+        monthlyDiscount: property.monthlyDiscount,
+        cleaningFee: property.cleaningFee,
+        extraGuestFee: property.extraGuestFee,
+        securityDeposit: property.securityDeposit,
+      }, null, 2));
 
       // Déterminer la capacité
       let capacity = 0;
@@ -137,45 +153,33 @@ export async function GET(request: NextRequest) {
           displayType = property.subType || 'Propriété';
       }
 
-      // NETTOYAGE DES IMAGES
+      // TRAITEMENT DES IMAGES
       const cleanImages = (property.images || [])
         .filter((img: any) => {
-          if (!img || typeof img !== 'string') {
-            return false;
-          }
-          
+          if (!img || typeof img !== 'string') return false;
           const trimmed = img.trim();
-          
-          // Exclure URLs blob (temporaires)
-          if (trimmed.startsWith('blob:')) {
-            return false;
-          }
-          
-          // Vérifier longueur minimale
-          if (trimmed.length < 10) {
-            return false;
-          }
-          
-          return true;
+          return !trimmed.startsWith('blob:');
         })
         .map((img: string) => {
-          const trimmed = img.trim();
+          let trimmed = img.trim();
           
-          // Nettoyer URLs Cloudinary
+          // Base64
+          if (trimmed.startsWith('data:image/') && trimmed.includes('base64')) {
+            if (trimmed.length > 500000) {
+              return 'https://via.placeholder.com/800x600/cccccc/969696?text=Image+non+disponible';
+            }
+            return trimmed;
+          }
+          
+          // Cloudinary
           if (trimmed.includes('cloudinary.com')) {
-            let cleanUrl = trimmed;
-            
-            // Forcer HTTPS
-            if (cleanUrl.startsWith('http://')) {
-              cleanUrl = cleanUrl.replace('http://', 'https://');
+            if (trimmed.startsWith('http://')) {
+              trimmed = trimmed.replace('http://', 'https://');
             }
-            
-            // Ajouter optimisation d'image
-            if (!cleanUrl.includes('/upload/q_auto,f_auto/') && cleanUrl.includes('/upload/')) {
-              cleanUrl = cleanUrl.replace('/upload/', '/upload/q_auto,f_auto/');
+            if (!trimmed.includes('/upload/q_auto,f_auto/') && trimmed.includes('/upload/')) {
+              trimmed = trimmed.replace('/upload/', '/upload/q_auto,f_auto/');
             }
-            
-            return cleanUrl;
+            return trimmed;
           }
           
           return trimmed;
@@ -187,55 +191,57 @@ export async function GET(request: NextRequest) {
         ? cleanImages 
         : ['https://via.placeholder.com/800x600/cccccc/969696?text=Immobilier+B%C3%A9nin'];
 
-      // FORMATION DE L'OBJET COMPLET  
+      // FORMATION DE L'OBJET COMPLET CORRIGÉ
       const formattedProperty = {
-        // === Tous les champs de Bien ===
+        // === Informations de base ===
         id: property.id,
         title: property.title || `${displayType} à ${property.city}`,
+        type: displayType, // CRITIQUE: le frontend cherche 'type'
         category: property.category,
         subType: property.subType,
         privacy: property.privacy,
+        displayType: displayType, // Pour compatibilité
         
-        // LocationStep
-        country: property.country,
+        // === LocationStep ===
+        location: property.neighborhood || property.city,
         city: property.city,
         neighborhood: property.neighborhood,
         address: property.address,
+        country: property.country || 'Bénin',
         postalCode: property.postalCode,
         latitude: property.latitude,
         longitude: property.longitude,
         
-        // BasicsStep - Champs communs
+        // === BasicsStep ===
+        // Champs communs
         size: property.size,
         floors: property.floors,
         
-        // BasicsStep - Maison
+        // Champs maison
         maxGuests: property.maxGuests,
         bedrooms: property.bedrooms,
-        beds: property.beds,
+        beds: property.beds || 0,
         bathrooms: property.bathrooms,
         privateEntrance: property.privateEntrance || false,
         
-        // BasicsStep - Bureau
+        // Champs bureau
         employees: property.employees,
-        offices: property.offices,
-        meetingRooms: property.meetingRooms,
-        workstations: property.workstations,
+        offices: property.offices || 0,
+        meetingRooms: property.meetingRooms || 0,
+        workstations: property.workstations || 0,
         
-        // BasicsStep - Événement
+        // Champs événement
         eventCapacity: property.eventCapacity,
         parkingSpots: property.parkingSpots,
         wheelchairAccessible: property.wheelchairAccessible || false,
-        hasStage: property.hasStage || false,
-        hasSoundSystem: property.hasSoundSystem || false,
-        hasProjector: property.hasProjector || false,
-        hasCatering: (property as any).hasCatering || false, 
-        minBookingHours: property.minBookingHours,
+        hasStage: property.hasStage === true,
+        hasSoundSystem: property.hasSoundSystem === true,
+        hasProjector: property.hasProjector === true,
+        hasCatering: property.hasCatering === true,
+        minBookingHours: property.minBookingHours || 0,
         
-        // TitleStep
-        displayType: displayType,
-        
-        // PriceStep
+        // === PriceStep - CORRECTION CRITIQUE ===
+        price: property.basePrice || 0, // CRITIQUE: le frontend cherche 'price'
         basePrice: property.basePrice || 0,
         currency: property.currency || 'FCFA',
         weeklyDiscount: property.weeklyDiscount || 0,
@@ -244,25 +250,28 @@ export async function GET(request: NextRequest) {
         extraGuestFee: property.extraGuestFee || 0,
         securityDeposit: property.securityDeposit || 0,
         
-        // Rules
+        // === Rules ===
         checkInTime: property.checkInTime || '15:00',
         checkOutTime: property.checkOutTime || '11:00',
         childrenAllowed: property.childrenAllowed !== false,
         
-        // Images
-        images: images,
+        // === Images ===
         img: images[0] || '',
+        images: images,
         
-        // Statut
-        isPublished: property.isPublished,
+        // Information sur les images
+        _imageInfo: {
+          count: images.length,
+          hasBase64: images.some(img => img.startsWith('data:image/')),
+        },
         
         // === DescriptionStep ===
         description: property.description ? {
-          summary: property.description.summary,
-          spaceDescription: property.description.spaceDescription,
-          guestAccess: property.description.guestAccess,
-          neighborhood: property.description.neighborhoodInfo,
-          createdAt: property.description.createdAt.toISOString(),
+          summary: property.description.summary || '',
+          spaceDescription: property.description.spaceDescription || '',
+          guestAccess: property.description.guestAccess || '',
+          neighborhoodInfo: property.description.neighborhoodInfo || '',
+          createdAt: property.description.createdAt?.toISOString(),
         } : null,
         
         // === Utilisateur ===
@@ -274,18 +283,21 @@ export async function GET(request: NextRequest) {
         },
         
         // === AmenitiesStep ===
+        wifi: hasWifi,
         amenities: amenities,
         amenitiesDetails: property.equipements.map(e => ({
           id: e.equipement.id,
           code: e.equipement.code,
           nom: e.equipement.nom,
-          description: e.equipement.description,
+          description: e.equipement.description || '',
           categorie: e.equipement.categorie,
+          pourMaison: e.equipement.pourMaison,
+          pourBureau: e.equipement.pourBureau,
+          pourEvenement: e.equipement.pourEvenement,
         })),
         
-        wifi: hasWifi,
-        
-        // Features calculées
+        // === Features calculées ===
+        capacity: capacity,
         features: {
           hasPool: amenities.some(a => a.toLowerCase().includes('piscine')),
           hasAirConditioning: amenities.some(a => a.toLowerCase().includes('climatisation')),
@@ -294,20 +306,59 @@ export async function GET(request: NextRequest) {
           hasTerrace: amenities.some(a => a.toLowerCase().includes('terrasse') || a.toLowerCase().includes('balcon')),
         },
         
-        // Capacité calculée
-        capacity: capacity,
-        location: property.neighborhood || property.city,
-        price: property.basePrice || 0,
-        
-        // Timestamps
+        // === Métadonnées ===
+        isPublished: property.isPublished,
         createdAt: property.createdAt.toISOString(),
         updatedAt: property.updatedAt.toISOString(),
+        
+        // === Groupement pour compatibilité ===
+        rules: {
+          checkInTime: property.checkInTime || '15:00',
+          checkOutTime: property.checkOutTime || '11:00',
+          childrenAllowed: property.childrenAllowed !== false,
+        },
+        
+        pricing: {
+          basePrice: property.basePrice || 0,
+          currency: property.currency || 'FCFA',
+          weeklyDiscount: property.weeklyDiscount || 0,
+          monthlyDiscount: property.monthlyDiscount || 0,
+          cleaningFee: property.cleaningFee || 0,
+          extraGuestFee: property.extraGuestFee || 0,
+          securityDeposit: property.securityDeposit || 0,
+        },
       };
+
+      console.log(`✅ Bien ${property.id} formaté - VÉRIFICATION:`);
+      console.log('  • type (displayType):', formattedProperty.type);
+      console.log('  • price (basePrice):', formattedProperty.price);
+      console.log('  • beds:', formattedProperty.beds, '(brut:', property.beds, ')');
+      console.log('  • offices:', formattedProperty.offices);
+      console.log('  • hasStage:', formattedProperty.hasStage, '(brut:', property.hasStage, ')');
+      console.log('  • images count:', formattedProperty.images.length);
+      console.log('  • postalCode:', formattedProperty.postalCode);
+      console.log('  • weeklyDiscount:', formattedProperty.weeklyDiscount);
 
       return formattedProperty;
     });
 
-    console.log(`✅ ${formattedProperties.length} propriétés formatées avec succès`);
+    console.log(`\n✅ ${formattedProperties.length} propriétés formatées avec succès`);
+    
+    // Vérification finale
+    if (formattedProperties.length > 0) {
+      const first = formattedProperties[0];
+      console.log('🔍 VÉRIFICATION FINALE - Premier bien:');
+      console.log('  • Tous les champs disponibles:', Object.keys(first));
+      console.log('  • Valeurs critiques:');
+      console.log('    - type:', first.type);
+      console.log('    - price:', first.price);
+      console.log('    - beds:', first.beds);
+      console.log('    - offices:', first.offices);
+      console.log('    - hasStage:', first.hasStage);
+      console.log('    - images count:', first.images?.length);
+      console.log('    - postalCode:', first.postalCode);
+      console.log('    - weeklyDiscount:', first.weeklyDiscount);
+    }
 
     return NextResponse.json({
       success: true,
@@ -321,8 +372,10 @@ export async function GET(request: NextRequest) {
         offset: parseInt(offset)
       }
     });
+    
   } catch (error: any) {
     console.error('❌ Erreur lors de la récupération des propriétés:', error);
+    console.error('Stack trace:', error.stack);
     
     return NextResponse.json(
       { 
@@ -335,7 +388,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Endpoint POST 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -352,7 +404,6 @@ export async function POST(request: NextRequest) {
     
     // Créer l'objet de données 
     const createData: any = {
-      // Tous les champs de Bien
       title: body.title,
       category: body.category,
       subType: body.subType || '',
@@ -381,10 +432,10 @@ export async function POST(request: NextRequest) {
       eventCapacity: body.eventCapacity,
       parkingSpots: body.parkingSpots,
       wheelchairAccessible: body.wheelchairAccessible,
-      // hasStage: body.hasStage,
-      // hasSoundSystem: body.hasSoundSystem,
-      // hasProjector: body.hasProjector,
-      // hasCatering: body.hasCatering,
+      hasStage: body.hasStage,
+      hasSoundSystem: body.hasSoundSystem,
+      hasProjector: body.hasProjector,
+      hasCatering: body.hasCatering,
       minBookingHours: body.minBookingHours,
       
       // PriceStep

@@ -1,4 +1,3 @@
-// app/api/publish/route.ts 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
@@ -24,49 +23,60 @@ function isCloudinaryConfigured(): boolean {
   return hasConfig;
 }
 
-// Fonction d'upload
-async function uploadImage(file: File, index: number, bienId?: string): Promise<string> {
+// Fonction d'upload améliorée
+async function uploadImage(imageData: any, index: number, bienId?: string): Promise<string> {
   try {
     console.log(`📤 Traitement image ${index + 1}:`, {
-      name: file?.name,
-      size: file?.size,
-      type: file?.type,
-      isFileInstance: file instanceof File,
-      hasArrayBuffer: typeof file?.arrayBuffer === 'function'
+      type: typeof imageData,
+      isFile: imageData instanceof File,
+      isString: typeof imageData === 'string',
+      length: typeof imageData === 'string' ? imageData.length : 'N/A'
     });
 
-    // Vérifier si c'est un objet File valide
-    if (!file || !(file instanceof File) || typeof file.arrayBuffer !== 'function') {
-      console.error(`❌ Image ${index + 1}: Objet File invalide`);
-      throw new Error('Objet File invalide');
+    // CAS 1: C'est déjà une URL (string)
+    if (typeof imageData === 'string') {
+      // Si c'est déjà une URL valide
+      if (imageData.startsWith('http') || imageData.startsWith('https') || imageData.startsWith('data:')) {
+        console.log(`✅ Image ${index + 1}: URL déjà existante`);
+        return imageData;
+      }
+      // Si c'est base64
+      else if (imageData.includes('base64')) {
+        console.log(`✅ Image ${index + 1}: Base64 détecté`);
+        return imageData;
+      }
     }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
     
-    if (!isCloudinaryConfigured()) {
-      // Fallback vers base64
-      const base64 = buffer.toString('base64');
-      return `data:${file.type};base64,${base64}`;
-    }
-    
-    try {
-      // Import dynamique pour éviter les erreurs au build
-      const { uploadBufferToCloudinary } = await import('@/lib/cloudinary');
-      return await uploadBufferToCloudinary(buffer, {
-        filename: file.name,
-        index: index,
-        bienId: bienId
-      });
-    } catch (error: any) {
-      console.error('❌ Erreur Cloudinary, fallback base64:', error.message);
+    // CAS 2: C'est un objet File
+    if (imageData instanceof File) {
+      const buffer = Buffer.from(await imageData.arrayBuffer());
       
-      // Fallback vers base64
-      const base64 = buffer.toString('base64');
-      return `data:${file.type};base64,${base64}`;
+      if (!isCloudinaryConfigured()) {
+        const base64 = buffer.toString('base64');
+        return `data:${imageData.type};base64,${base64}`;
+      }
+      
+      try {
+        const { uploadBufferToCloudinary } = await import('@/lib/cloudinary');
+        return await uploadBufferToCloudinary(buffer, {
+          filename: imageData.name,
+          index: index,
+          bienId: bienId
+        });
+      } catch (error: any) {
+        console.error('❌ Erreur Cloudinary:', error.message);
+        const base64 = buffer.toString('base64');
+        return `data:${imageData.type};base64,${base64}`;
+      }
     }
+    
+    // Dernier recours : placeholder
+    console.warn(`⚠️ Image ${index + 1}: format non supporté, placeholder utilisé`);
+    return 'https://via.placeholder.com/800x600/cccccc/969696?text=Immobilier+B%C3%A9nin';
+    
   } catch (error: any) {
     console.error(`❌ Erreur upload image ${index + 1}:`, error.message);
-    throw error;
+    return 'https://via.placeholder.com/800x600/cccccc/969696?text=Erreur+Image';
   }
 }
 
@@ -126,53 +136,37 @@ export async function POST(request: NextRequest) {
     }
     // ============ FIN DE LA VÉRIFICATION DE LIMITE ============
     
-    // CORRECTION CRITIQUE : Vérifier et convertir les fichiers
+    // NOUVELLE SECTION : Récupération et traitement des photos
     const photoEntries = formData.getAll('photos');
+    console.log('📤 Photos reçues (toutes):', photoEntries.length);
     
-    // Filtrer et convertir les entrées valides en File
-    const photoFiles: File[] = [];
-    
-    console.log('📤 Photos reçues (brutes):', photoEntries.length);
-    
-    // SOLUTION ALTERNATIVE 
+    // Traiter TOUTES les entrées
+    const imagePromises: Promise<string>[] = [];
+
     for (let i = 0; i < photoEntries.length; i++) {
       const entry = photoEntries[i];
-      const entryAny = entry as any;
       
-      console.log(`\n🔍 Photo ${i + 1}:`, {
-        type: typeof entry,
-        name: entryAny?.name || 'N/A',
-        size: entryAny?.size || 'N/A',
-      });
-      
-      // Vérification simple
-      if (entry && typeof entry === 'object' && 'name' in entryAny && 'size' in entryAny) {
-        try {
-          // Essayer de créer un File à partir de l'entrée
-          let file: File;
-          
-          // Vérifier si on peut accéder à arrayBuffer
-          if (entryAny.arrayBuffer && typeof entryAny.arrayBuffer === 'function') {
-            const buffer = Buffer.from(await entryAny.arrayBuffer());
-            file = new File([buffer], entryAny.name || `image_${i}.jpg`, {
-              type: entryAny.type || 'image/jpeg'
-            });
-          } else if (entry instanceof File) {
-            // Si c'est déjà un File
-            file = entry;
-          } else {
-            // Si on ne peut pas récupérer les données, passer à la suivante
-            console.warn(`⚠️ Photo ${i + 1}: impossible de traiter`);
-            continue;
-          }
-          
-          if (file.size > 0) {
-            photoFiles.push(file);
-            console.log(`✅ Photo ${i + 1} validée: ${file.name}`);
-          }
-        } catch (error: any) {
-          console.error(`❌ Photo ${i + 1} erreur:`, error.message);
+      if (typeof entry === 'string') {
+        // Cas 1: C'est déjà une URL (Cloudinary, HTTPS, ou base64)
+        console.log(`📷 Photo ${i + 1}: String (${entry.length} caractères)`);
+        
+        if (entry.startsWith('http') || entry.startsWith('https') || entry.startsWith('data:')) {
+          // URL déjà valide, l'utiliser directement
+          imagePromises.push(Promise.resolve(entry));
+        } else {
+          // Autre type de string, considérer comme URL Cloudinary
+          imagePromises.push(Promise.resolve(entry));
         }
+      } 
+      else if (entry instanceof File) {
+        // Cas 2: C'est un File, le traiter normalement
+        console.log(`📷 Photo ${i + 1}: File (${entry.name}, ${entry.size} bytes)`);
+        // CORRECTION : Passer undefined au lieu de null si pas de bienId
+        imagePromises.push(uploadImage(entry, i, undefined));
+      }
+      else {
+        // Cas 3: Type inconnu, ignorer
+        console.warn(`⚠️ Photo ${i + 1}: Type non supporté (${typeof entry})`);
       }
     }
     
@@ -180,21 +174,15 @@ export async function POST(request: NextRequest) {
     console.log('  • Titre:', data.title);
     console.log('  • Catégorie:', data.housingType?.category);
     console.log('  • Ville:', data.location?.city);
-    console.log('  • Photos validées:', photoFiles.length, 'sur', photoEntries.length);
-    
-    if (photoFiles.length > 0) {
-      console.log('  • Noms des photos:');
-      photoFiles.forEach((file, i) => {
-        console.log(`      ${i + 1}. ${file.name} (${(file.size / 1024).toFixed(1)} KB, ${file.type})`);
-      });
-    }
+    console.log('  • Photos reçues:', photoEntries.length);
+    console.log('  • Photos traitées:', imagePromises.length);
     
     console.log('  • Cloudinary:', isCloudinaryConfigured() ? '✅ ACTIF' : '❌ INACTIF (base64)');
-    console.log('  • Limite:', `${MAX_LISTINGS_PER_USER} annonces max`); // AJOUTÉ
+    console.log('  • Limite:', `${MAX_LISTINGS_PER_USER} annonces max`);
 
     // Créer un tableau d'URLs placeholder temporaires
-    const placeholderUrls = photoFiles.length > 0 
-      ? Array(photoFiles.length).fill('https://via.placeholder.com/800x600/cccccc/969696?text=Chargement...')
+    const placeholderUrls = imagePromises.length > 0 
+      ? Array(imagePromises.length).fill('https://via.placeholder.com/800x600/cccccc/969696?text=Chargement...')
       : ['https://via.placeholder.com/800x600/cccccc/969696?text=Immobilier+B%C3%A9nin'];
 
     console.log('📝 Création du bien...');
@@ -239,6 +227,7 @@ export async function POST(request: NextRequest) {
       hasStage: data.basics?.hasStage || false,
       hasSoundSystem: data.basics?.hasSoundSystem || false,
       hasProjector: data.basics?.hasProjector || false,
+      hasCatering: data.basics?.hasCatering || false,
       minBookingHours: data.basics?.minBookingHours ? parseInt(data.basics.minBookingHours) : null,
       
       // Prix
@@ -286,38 +275,50 @@ export async function POST(request: NextRequest) {
     
     let imageUrls: string[] = [];
     
-    if (photoFiles.length > 0) {
-      const uploadPromises = photoFiles.map(async (file, index) => {
-        console.log(`\n📤 Upload ${index + 1}/${photoFiles.length}:`);
-        console.log(`   📄 Nom: ${file.name}`);
-        console.log(`   📊 Taille: ${(file.size / 1024).toFixed(1)} KB`);
-        console.log(`   🏷️  Type: ${file.type}`);
+    if (imagePromises.length > 0) {
+      // Maintenant qu'on a l'ID du bien, on peut uploader les images qui en ont besoin
+      const finalPromises = imagePromises.map(async (promise, index) => {
+        console.log(`\n📤 Traitement ${index + 1}/${imagePromises.length}:`);
         
-        try {
-          const url = await uploadImage(file, index, bienTemporaire.id.toString());
-          console.log(`   ✅ Réussi: ${url.substring(0, 80)}...`);
+        const url = await promise;
+        
+        // Si c'est déjà une URL Cloudinary ou HTTPS, la garder
+        if (url.includes('cloudinary.com') || url.startsWith('https://')) {
+          console.log(`   ✅ URL Cloudinary/HTTPS: ${url.substring(0, 60)}...`);
           return url;
-        } catch (error: any) {
-          console.error(`   ❌ Échec upload: ${error.message}`);
-          
+        }
+        
+        // Si c'est base64 ou placeholder, essayer d'uploader à Cloudinary
+        if (url.startsWith('data:') || url.includes('placeholder.com')) {
           try {
-            // Fallback base64
-            const buffer = Buffer.from(await file.arrayBuffer());
-            const base64 = buffer.toString('base64');
-            const fallbackUrl = `data:${file.type};base64,${base64}`;
-            console.log(`   🔄 Fallback base64 activé`);
-            return fallbackUrl;
-          } catch (fallbackError: any) {
-            console.error(`   ❌ Fallback échoué: ${fallbackError.message}`);
-            // Dernier recours : placeholder
-            return 'https://via.placeholder.com/800x600/cccccc/969696?text=Image+non+disponible';
+            if (isCloudinaryConfigured()) {
+              const { uploadBufferToCloudinary } = await import('@/lib/cloudinary');
+              
+              if (url.startsWith('data:')) {
+                // Convertir base64 en buffer
+                const base64Data = url.split(',')[1];
+                const buffer = Buffer.from(base64Data, 'base64');
+                const cloudinaryUrl = await uploadBufferToCloudinary(buffer, {
+                  filename: `image_${index + 1}.jpg`,
+                  index: index,
+                  bienId: bienTemporaire.id.toString()
+                });
+                console.log(`   ✅ Base64 uploadé vers Cloudinary`);
+                return cloudinaryUrl;
+              }
+            }
+          } catch (error: any) {
+            console.error(`   ❌ Erreur upload: ${error.message}`);
           }
         }
+        
+        // Sinon garder l'URL originale
+        return url;
       });
 
-      imageUrls = await Promise.all(uploadPromises);
+      imageUrls = await Promise.all(finalPromises);
     } else {
-      console.log('ℹ️ Aucune photo à uploader');
+      console.log('ℹ️ Aucune photo à traiter');
       imageUrls = placeholderUrls;
     }
 
@@ -495,7 +496,7 @@ export async function POST(request: NextRequest) {
     console.log(`   • Catégorie: ${bienFinal.category}`);
     console.log(`   • Images: ${imageUrls.length}`);
     console.log(`   • Cloudinary: ${isCloudinaryConfigured() ? 'Utilisé' : 'Base64'}`);
-    console.log(`   • Limite respectée: ✅`); // AJOUTÉ
+    console.log(`   • Limite respectée: ✅`);
 
     return NextResponse.json({
       success: true,
@@ -535,7 +536,7 @@ export async function POST(request: NextRequest) {
     } else if (error.message.includes('prisma')) {
       errorMessage = 'Erreur base de données. Veuillez réessayer.';
       statusCode = 500;
-    } else if (error.message.includes('LIMIT_REACHED')) { // AJOUTÉ
+    } else if (error.message.includes('LIMIT_REACHED')) {
       errorMessage = error.message.replace('LIMIT_REACHED: ', '');
       statusCode = 403;
     }

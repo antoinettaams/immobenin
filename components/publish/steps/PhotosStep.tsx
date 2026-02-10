@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, Camera, X, Star, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/Button';
 
@@ -30,9 +30,40 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
   const [validationError, setValidationError] = useState<string>('');
 
   // Vérifier qu'on est côté client
-  React.useEffect(() => {
+  useEffect(() => {
     setIsClient(true);
-  }, []);
+    
+    // Debug: Vérifier ce qui est reçu du parent
+    console.log('📸 PhotosStep - data reçu du parent:', data.length);
+    data.forEach((photo, i) => {
+      console.log(`  Data ${i}:`, {
+        id: photo.id,
+        hasFile: !!photo.file,
+        fileInstance: photo.file instanceof File,
+        fileType: photo.file?.type,
+        fileSize: photo.file?.size,
+        urlLength: photo.url?.length || 0
+      });
+    });
+  }, [data]);
+
+  // Debug: Vérifier l'état actuel des photos
+  useEffect(() => {
+    if (photos.length > 0) {
+      console.log('📸 PhotosStep - Contenu actuel des photos:', photos.length);
+      photos.forEach((photo, i) => {
+        console.log(`  Photo ${i}:`, {
+          id: photo.id,
+          hasFile: !!photo.file,
+          fileInstance: photo.file instanceof File,
+          fileType: photo.file?.type,
+          fileSize: photo.file?.size,
+          urlStartsWithBlob: photo.url?.startsWith('blob:') || false,
+          isPrimary: photo.isPrimary
+        });
+      });
+    }
+  }, [photos]);
 
   const handleFileSelect = (files: FileList) => {
     // Ne pas exécuter côté serveur
@@ -42,10 +73,25 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
     
     Array.from(files).slice(0, 10 - photos.length).forEach((file, index) => {
       if (file.type.startsWith('image/')) {
-        const id = `photo-${Date.now()}-${index}`;
-        // CORRECTION : Vérifier que window.URL existe
+        const id = `photo-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`;
         const url = window.URL ? URL.createObjectURL(file) : '';
-        newPhotos.push({ id, url, file, isPrimary: false });
+        
+        // IMPORTANT: Sauvegarder l'objet File ORIGINAL
+        // Ne pas créer de copie car cela peut causer des problèmes
+        newPhotos.push({ 
+          id, 
+          url, 
+          file: file, // Garder l'original
+          isPrimary: false 
+        });
+        
+        console.log(`📸 Fichier ajouté ${index}:`, {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          isFileInstance: file instanceof File,
+          hasArrayBuffer: typeof file.arrayBuffer === 'function'
+        });
       }
     });
     
@@ -57,6 +103,9 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
     }
     
     setPhotos(updatedPhotos);
+    console.log('📸 onUpdate appelé avec:', updatedPhotos.length, 'photos');
+    
+    // Appeler onUpdate IMMÉDIATEMENT avec les nouveaux fichiers
     onUpdate(updatedPhotos);
     
     // Vérifier la validation après ajout
@@ -142,15 +191,39 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
 
   // Gérer le clic sur Suivant
   const handleNext = () => {
+    console.log('📸 handleNext - Vérification avant passage:');
+    console.log('Nombre de photos:', photos.length);
+    
+    // Vérifier ce qui est réellement présent
+    const validPhotos = photos.filter(photo => {
+      const hasValidFile = photo.file && photo.file instanceof File;
+      console.log(`  Photo ${photo.id}:`, {
+        hasFile: !!photo.file,
+        isFileInstance: photo.file instanceof File,
+        fileSize: photo.file?.size,
+        hasBlobUrl: photo.url?.startsWith('blob:')
+      });
+      return hasValidFile;
+    });
+    
+    console.log('Photos avec fichiers valides:', validPhotos.length);
+    
     if (photos.length < 3) {
       setValidationError(`Veuillez charger au minimum 3 photos (${photos.length} chargées)`);
       return;
     }
+    
+    // Vérifier que chaque photo a un fichier valide
+    if (validPhotos.length !== photos.length) {
+      setValidationError(`Certaines photos n'ont pas de fichier valide. Veuillez les recharger.`);
+      return;
+    }
+    
     onNext();
   };
 
   // Nettoyer les URLs blob  
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       if (typeof window !== 'undefined' && window.URL) {
         photos.forEach(photo => {
@@ -163,7 +236,7 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
   }, []);
 
   // Vérifier la validation initiale
-  React.useEffect(() => {
+  useEffect(() => {
     checkValidation(data);
   }, []);
 
@@ -231,7 +304,12 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
           ou choisissez-les depuis votre appareil
         </p>
         
-        <Button variant="secondary" size="md" className="w-full sm:w-auto">
+        <Button 
+          variant="secondary" 
+          size="md" 
+          className="w-full sm:w-auto"
+          onClick={() => document.getElementById('file-input')?.click()}
+        >
           <Camera className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           <span className="text-sm sm:text-base">Sélectionner des photos</span>
         </Button>
@@ -339,6 +417,16 @@ export const PhotosStep: React.FC<PhotosStepProps> = ({
                     {index + 1}
                   </div>
                 </div>
+                
+                {/* Informations de debug (seulement en développement) */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="absolute top-10 left-1 right-1 bg-black/70 text-white text-[10px] p-1 rounded">
+                    <div className="truncate">
+                      Fichier: {photo.file ? '✅' : '❌'} 
+                      {photo.file && ` ${Math.round((photo.file.size || 0) / 1024)}KB`}
+                    </div>
+                  </div>
+                )}
                 
                 {/* Boutons de déplacement */}
                 <div className="absolute bottom-1 sm:bottom-2 left-1 sm:left-2 right-1 sm:right-2 flex justify-between">

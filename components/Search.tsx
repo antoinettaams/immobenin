@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Search as SearchIcon, Map, Wifi, Home, Users, 
@@ -19,7 +19,8 @@ import {
   Presentation,
   GlassWater,
   Dumbbell,
-  Trees
+  Trees,
+  Loader2
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -127,17 +128,147 @@ interface Property {
   isPublished: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  displayType?: string;
+  basePrice?: number;
+  features?: {
+    hasPool: boolean;
+    hasAirConditioning: boolean;
+    hasParking: boolean;
+    hasKitchen: boolean;
+    hasTerrace: boolean;
+  };
 }
+
+// Composant Image optimisé
+const PropertyImageDisplay = ({ 
+  src, 
+  alt, 
+  className = "", 
+  fallback = true,
+  propertyId
+}: { 
+  src: string; 
+  alt: string; 
+  className?: string;
+  fallback?: boolean;
+  propertyId?: number;
+}) => {
+  const [hasError, setHasError] = useState(false);
+  const [imgSrc, setImgSrc] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);  
+  const [isLoaded, setIsLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    if (src && src.trim().length > 10) {
+      setIsLoading(true);
+      setIsLoaded(false);
+      setHasError(false);
+      
+      let cleanedSrc = src.trim();
+      
+      // Nettoyer base64
+      if (cleanedSrc.startsWith('data:image')) {
+        cleanedSrc = cleanedSrc.replace('...[BASE64_TROP_LONG]', '');
+      }
+      
+      // Cloudinary HTTPS
+      if (cleanedSrc.includes('cloudinary.com') && cleanedSrc.startsWith('http://')) {
+        cleanedSrc = cleanedSrc.replace('http://', 'https://');
+      }
+      
+      // Ne pas essayer d'afficher les URLs blob
+      if (cleanedSrc.startsWith('blob:')) {
+        setImgSrc('');
+        setHasError(true);
+        setIsLoading(false);
+        return;
+      }
+      
+      setImgSrc(cleanedSrc);
+      
+      // Préchargement
+      const img = new Image();
+      img.src = cleanedSrc;
+      img.onload = () => {
+        setIsLoading(false);
+        setIsLoaded(true);
+      };
+      img.onerror = () => {
+        setHasError(true);
+        setIsLoading(false);
+      };
+    } else {
+      setImgSrc('');
+      setHasError(true);
+      setIsLoading(false);
+    }
+  }, [src]);
+
+  const handleError = () => {
+    setHasError(true);
+    setIsLoading(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className={`${className} bg-gray-200 flex items-center justify-center relative`}>
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse"></div>
+        <div className="relative z-10">
+          <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!imgSrc || hasError || imgSrc === '') {
+    if (!fallback) return null;
+    
+    return (
+      <div className={`${className} bg-gray-100 flex items-center justify-center`}>
+        <div className="text-center p-4">
+          <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+          <span className="text-gray-500 text-xs">Image non disponible</span>
+          {propertyId && (
+            <span className="text-gray-400 text-xs block mt-1">Bien #{propertyId}</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${className} relative overflow-hidden`}>
+      <img
+        ref={imgRef}
+        src={imgSrc}
+        alt={alt}
+        className={`w-full h-full object-cover transition-opacity duration-300 ${
+          isLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+        onLoad={() => {
+          setIsLoading(false);
+          setIsLoaded(true);
+        }}
+        onError={handleError}
+        loading="lazy"
+        crossOrigin="anonymous"
+      />
+      {!isLoaded && (
+        <div className="absolute inset-0 bg-gray-200 animate-pulse"></div>
+      )}
+    </div>
+  );
+};
 
 export const Search: React.FC<SearchProps> = ({ onBack }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Lire les paramètres d'URL au chargement
+  // Lire les paramètres d'URL
   const initialLocation = searchParams.get('location') || '';
   const initialType = searchParams.get('type') || '';
   const initialGuests = searchParams.get('guests') || '';
-  const initialCategory = searchParams.get('category') || '';
 
   const [location, setLocation] = useState<string>(initialLocation);
   const [propertyType, setPropertyType] = useState<string>(initialType);
@@ -149,14 +280,27 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [hasInitialSearch, setHasInitialSearch] = useState<boolean>(false);
+  const [apiDebug, setApiDebug] = useState<any>(null);
 
-  // Fonction pour normaliser les données de l'API
+  // Fonction pour normaliser les données de l'API - VERSION CORRIGÉE
   const normalizePropertyData = (apiData: any): Property => {
-    console.log('🔄 Normalisation des données API:', apiData);
+    console.log('🔄 Normalisation des données API pour ID:', apiData.id);
     
-    // Gestion de la description complète
+    // VÉRIFICATION DE LA STRUCTURE API
+    console.log('📊 Données API reçues - Champs disponibles:', Object.keys(apiData));
+    console.log('🔍 Champs critiques:');
+    console.log('  • type:', apiData.type, '(displayType:', apiData.displayType, ')');
+    console.log('  • price:', apiData.price, '(basePrice:', apiData.basePrice, ')');
+    console.log('  • beds:', apiData.beds);
+    console.log('  • offices:', apiData.offices);
+    console.log('  • meetingRooms:', apiData.meetingRooms);
+    console.log('  • hasStage:', apiData.hasStage);
+    console.log('  • weeklyDiscount:', apiData.weeklyDiscount);
+    console.log('  • postalCode:', apiData.postalCode);
+    console.log('  • images count:', apiData.images?.length);
+
+    // Gestion de la description
     let description: PropertyDescription | string = '';
-    
     if (apiData.description && typeof apiData.description === 'object') {
       description = {
         summary: apiData.description.summary || '',
@@ -171,7 +315,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
       description = apiData.description;
     }
 
-    // IMAGES RÉELLES
+    // Images
     let images: string[] = [];
     let img: string = '';
     
@@ -180,56 +324,45 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
         .filter((img: any) => {
           if (typeof img !== 'string') return false;
           const trimmed = img.trim();
-          
-          // Exclure URLs blob
-          if (trimmed.startsWith('blob:')) {
-            return false;
-          }
-          
-          // Vérifier que c'est une URL valide
-          return trimmed.length > 10 && 
-                 (trimmed.startsWith('http') || 
-                  trimmed.startsWith('data:image') || 
-                  trimmed.startsWith('/'));
+          return trimmed.length > 10 && !trimmed.startsWith('blob:');
         })
         .map((img: string) => {
           let trimmed = img.trim();
-          
-          // Nettoyer base64
-          if (trimmed.startsWith('data:image')) {
-            trimmed = trimmed.replace('...[BASE64_TROP_LONG]', '');
-          }
-          
-          // Forcer HTTPS pour Cloudinary
           if (trimmed.includes('cloudinary.com') && trimmed.startsWith('http://')) {
             trimmed = trimmed.replace('http://', 'https://');
           }
-          
           return trimmed;
         });
       
       img = images[0] || '';
     }
 
-    // Utilisateur avec tous les champs
+    // Propriétaire
     const owner = {
       id: apiData.owner?.id,
       name: apiData.owner?.name || apiData.proprietaire?.nom || 'Propriétaire',
-      phone: apiData.owner?.phone || apiData.owner?.telephone || '',
+      phone: apiData.owner?.phone || apiData.owner?.telephone || apiData.proprietaire?.telephone || '',
       email: apiData.owner?.email || apiData.proprietaire?.email || '',
       createdAt: apiData.owner?.createdAt ? new Date(apiData.owner.createdAt) : 
                 apiData.proprietaire?.createdAt ? new Date(apiData.proprietaire.createdAt) : undefined
     };
 
-    // Équipements détaillés
-    const amenitiesDetails = apiData.amenitiesDetails || 
-                            apiData.equipementsDetails || 
-                            (apiData.equipements ? apiData.equipements.map((e: any) => e.equipement) : []);
+    // Équipements
+    let amenitiesDetails = [];
+    if (apiData.amenitiesDetails && Array.isArray(apiData.amenitiesDetails)) {
+      amenitiesDetails = apiData.amenitiesDetails;
+    } else if (apiData.equipementsDetails && Array.isArray(apiData.equipementsDetails)) {
+      amenitiesDetails = apiData.equipementsDetails;
+    } else if (apiData.equipements && Array.isArray(apiData.equipements)) {
+      amenitiesDetails = apiData.equipements.map((e: any) => 
+        e.equipement ? e.equipement : e
+      );
+    }
     
     const amenities = apiData.amenities || 
                      (amenitiesDetails ? amenitiesDetails.map((e: any) => e.nom).filter(Boolean) : []);
 
-    // Capacité calculée selon la catégorie
+    // Capacité
     let capacity = apiData.capacity || 0;
     if (!capacity) {
       switch (apiData.category) {
@@ -269,13 +402,15 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
       }
     }
 
-    return {
+    // Construction de l'objet Property
+    const property: Property = {
       id: apiData.id,
       title: apiData.title || '',
       type: displayType,
       category: apiData.category || 'HOUSE',
       subType: apiData.subType || '',
       privacy: apiData.privacy,
+      displayType: displayType,
       
       // LocationStep
       location: apiData.location || apiData.neighborhood || apiData.city || '',
@@ -286,39 +421,40 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
       latitude: apiData.latitude,
       longitude: apiData.longitude,
       
-      // PriceStep
+      // PriceStep - CORRECTION CRITIQUE
       price: apiData.price || apiData.basePrice || 0,
+      basePrice: apiData.basePrice || 0,
       currency: apiData.currency || 'FCFA',
-      weeklyDiscount: apiData.weeklyDiscount || apiData.pricing?.weeklyDiscount,
-      monthlyDiscount: apiData.monthlyDiscount || apiData.pricing?.monthlyDiscount,
-      cleaningFee: apiData.cleaningFee || apiData.pricing?.cleaningFee,
-      extraGuestFee: apiData.extraGuestFee || apiData.pricing?.extraGuestFee,
-      securityDeposit: apiData.securityDeposit || apiData.pricing?.securityDeposit,
+      weeklyDiscount: apiData.weeklyDiscount || 0,
+      monthlyDiscount: apiData.monthlyDiscount || 0,
+      cleaningFee: apiData.cleaningFee || 0,
+      extraGuestFee: apiData.extraGuestFee || 0,
+      securityDeposit: apiData.securityDeposit || 0,
       
       // BasicsStep - Communs
       size: apiData.size,
       floors: apiData.floors,
       capacity,
       bedrooms: apiData.bedrooms,
-      beds: apiData.beds,
+      beds: apiData.beds || 0,
       bathrooms: apiData.bathrooms,
       privateEntrance: apiData.privateEntrance,
       
       // BasicsStep - Office
       employees: apiData.employees,
-      offices: apiData.offices,
-      meetingRooms: apiData.meetingRooms,
-      workstations: apiData.workstations,
+      offices: apiData.offices || 0,
+      meetingRooms: apiData.meetingRooms || 0,
+      workstations: apiData.workstations || 0,
       
       // BasicsStep - Event
       eventCapacity: apiData.eventCapacity,
       parkingSpots: apiData.parkingSpots,
       wheelchairAccessible: apiData.wheelchairAccessible,
-      hasStage: apiData.hasStage,
-      hasSoundSystem: apiData.hasSoundSystem,
-      hasProjector: apiData.hasProjector,
-      hasCatering: apiData.hasCatering,
-      minBookingHours: apiData.minBookingHours,
+      hasStage: apiData.hasStage === true,
+      hasSoundSystem: apiData.hasSoundSystem === true,
+      hasProjector: apiData.hasProjector === true,
+      hasCatering: apiData.hasCatering === true,
+      minBookingHours: apiData.minBookingHours || 0,
       
       // Images
       images,
@@ -336,200 +472,171 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
       equipementsDetails: amenitiesDetails,
       
       // Règles
-      checkInTime: apiData.checkInTime || apiData.rules?.checkInTime || '15:00',
-      checkOutTime: apiData.checkOutTime || apiData.rules?.checkOutTime || '11:00',
+      checkInTime: apiData.checkInTime || '15:00',
+      checkOutTime: apiData.checkOutTime || '11:00',
       childrenAllowed: apiData.childrenAllowed !== false,
       
       // Autres
       isPublished: apiData.isPublished || false,
       createdAt: apiData.createdAt ? new Date(apiData.createdAt) : undefined,
-      updatedAt: apiData.updatedAt ? new Date(apiData.updatedAt) : undefined
+      updatedAt: apiData.updatedAt ? new Date(apiData.updatedAt) : undefined,
+      
+      // Features
+      features: apiData.features || {
+        hasPool: amenities.some((a: string) => a.toLowerCase().includes('piscine')),
+        hasAirConditioning: amenities.some((a: string) => a.toLowerCase().includes('climatisation')),
+        hasParking: amenities.some((a: string) => a.toLowerCase().includes('parking')),
+        hasKitchen: amenities.some((a: string) => a.toLowerCase().includes('cuisine')),
+        hasTerrace: amenities.some((a: string) => a.toLowerCase().includes('terrasse') || a.toLowerCase().includes('balcon')),
+      }
     };
+
+    console.log('✅ Propriété normalisée:', {
+      id: property.id,
+      type: property.type,
+      price: property.price,
+      beds: property.beds,
+      offices: property.offices,
+      hasStage: property.hasStage,
+      images: property.images.length
+    });
+
+    return property;
   };
 
-  // Composant pour afficher une image avec fallback
-const PropertyImageDisplay = ({ 
-  src, 
-  alt, 
-  className = "", 
-  fallback = true,
-  propertyId
-}: { 
-  src: string; 
-  alt: string; 
-  className?: string;
-  fallback?: boolean;
-  propertyId?: number;
-}) => {
-  const [hasError, setHasError] = useState(false);
-  const [imgSrc, setImgSrc] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);  
-
-  useEffect(() => {
-    if (src && src.trim().length > 10) {
-      setIsLoading(true);  
-      setHasError(false);
-      
-      let cleanedSrc = src.trim();
-      
-      // Nettoyer les base64
-      if (cleanedSrc.startsWith('data:image')) {
-        cleanedSrc = cleanedSrc.replace('...[BASE64_TROP_LONG]', '');
-      }
-      
-      // Cloudinary HTTPS
-      if (cleanedSrc.includes('cloudinary.com') && cleanedSrc.startsWith('http://')) {
-        cleanedSrc = cleanedSrc.replace('http://', 'https://');
-      }
-      
-      // Ne pas essayer d'afficher les URLs blob
-      if (cleanedSrc.startsWith('blob:')) {
-        setImgSrc('');
-        setHasError(true);
-        setIsLoading(false);
-        return;
-      }
-      
-      setImgSrc(cleanedSrc);
-      
-      // Précharger l'image
-      const img = new Image();
-      img.src = cleanedSrc;
-      img.onload = () => {
-        setIsLoading(false);
-      };
-      img.onerror = () => {
-        setHasError(true);
-        setIsLoading(false);
-      };
-    } else {
-      setImgSrc('');
-      setHasError(true);
-      setIsLoading(false);
-    }
-  }, [src]);
-
-  const handleError = () => {
-    setHasError(true);
-    setIsLoading(false);
-  };
-
-  // Pendant le chargement  
-  if (isLoading) {
-    return (
-      <div className={`${className} bg-gray-200 flex items-center justify-center`}>
-        <div className="animate-pulse bg-gray-300 w-full h-full"></div>
-      </div>
-    );
-  }
-
-  // Si pas d'image ou erreur
-  if (!imgSrc || hasError || imgSrc === '') {
-    if (!fallback) return null;
-    
-    return (
-      <div className={`${className} bg-gray-200 flex items-center justify-center`}>
-        <div className="text-center p-4">
-          <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-          <span className="text-gray-500 text-xs">Image non disponible</span>
-          {propertyId && (
-            <span className="text-gray-400 text-xs block mt-1">Bien #{propertyId}</span>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <img
-      src={imgSrc}
-      alt={alt}
-      className={`${className} transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
-      onLoad={() => setIsLoading(false)}
-      onError={handleError}
-      loading="lazy" 
-      crossOrigin="anonymous"
-    />
-  );
-};
-
-  // Détecter si on est sur mobile
+  // Détecter mobile
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Charger les propriétés au démarrage avec les paramètres d'URL
-  useEffect(() => {
-    fetchProperties({
-      location: initialLocation,
-      type: initialType,
-      guests: initialGuests
-    });
-    
-    // Si on a des paramètres d'URL
-    if (initialLocation || initialType || initialGuests) {
-      setIsSearching(true);
-      setHasInitialSearch(true);
-    }
-  }, []);
-
+  // Fonction pour récupérer les propriétés - VERSION CORRIGÉE
   const fetchProperties = async (filters?: { location?: string; type?: string; guests?: string }) => {
     try {
       setIsLoading(true);
+      console.log('📡 Début fetchProperties avec filtres:', filters);
       
       const params = new URLSearchParams();
       if (filters?.location) params.append('location', filters.location);
       if (filters?.type) params.append('type', filters.type);
       if (filters?.guests) params.append('guests', filters.guests);
       
-      const response = await fetch(`/api/properties?${params.toString()}`);
+      // Ajoutez des logs pour debug
+      console.log('🔍 Paramètres envoyés à l\'API:');
+      console.log('  • Location:', filters?.location || 'null');
+      console.log('  • Type:', filters?.type || 'null');
+      console.log('  • Guests:', filters?.guests || 'null');
+      
+      const url = `/api/properties?${params.toString()}`;
+      console.log('🌐 Appel API:', url);
+      
+      const response = await fetch(url);
       const data = await response.json();
       
-      if (data.success) {
-        const normalizedProperties = data.data.map((property: any) => normalizePropertyData(property));
-        setFilteredProperties(normalizedProperties);
+      console.log('📦 Réponse API properties:', {
+        success: data.success,
+        count: data.data?.length,
+        total: data.total
+      });
+      
+      setApiDebug(data);
+      
+      if (data.success && data.data) {
+        if (data.data.length > 0) {
+          // VÉRIFICATION DÉTAILLÉE
+          const firstProperty = data.data[0];
+          console.log('\n🔍 PREMIER BIEN DE L\'API - ANALYSE COMPLÈTE:');
+          console.log('  • ID:', firstProperty.id);
+          console.log('  • Title:', firstProperty.title);
+          console.log('  • Type:', firstProperty.type, '(displayType:', firstProperty.displayType, ')');
+          console.log('  • Price:', firstProperty.price, 'BasePrice:', firstProperty.basePrice);
+          console.log('  • Beds:', firstProperty.beds, '(type:', typeof firstProperty.beds, ')');
+          console.log('  • Offices:', firstProperty.offices);
+          console.log('  • Meeting Rooms:', firstProperty.meetingRooms);
+          console.log('  • Workstations:', firstProperty.workstations);
+          console.log('  • Has Stage:', firstProperty.hasStage, '(type:', typeof firstProperty.hasStage, ')');
+          console.log('  • Has Sound System:', firstProperty.hasSoundSystem);
+          console.log('  • Has Projector:', firstProperty.hasProjector);
+          console.log('  • Has Catering:', firstProperty.hasCatering);
+          console.log('  • Postal Code:', firstProperty.postalCode);
+          console.log('  • Latitude/Longitude:', firstProperty.latitude, '/', firstProperty.longitude);
+          console.log('  • Weekly Discount:', firstProperty.weeklyDiscount);
+          console.log('  • Monthly Discount:', firstProperty.monthlyDiscount);
+          console.log('  • Cleaning Fee:', firstProperty.cleaningFee);
+          console.log('  • Extra Guest Fee:', firstProperty.extraGuestFee);
+          console.log('  • Security Deposit:', firstProperty.securityDeposit);
+          console.log('  • Images count:', firstProperty.images?.length);
+          console.log('  • Images preview:', firstProperty.images?.slice(0, 2));
+          
+          console.log('\n📋 TOUS LES CHAMPS DISPONIBLES:');
+          Object.keys(firstProperty).forEach(key => {
+            console.log(`  • ${key}:`, firstProperty[key]);
+          });
+          
+          const normalizedProperties = data.data.map((property: any) => normalizePropertyData(property));
+          setFilteredProperties(normalizedProperties);
+        } else {
+          console.warn('⚠️ Aucune propriété trouvée avec ces filtres');
+          setFilteredProperties([]);
+        }
       } else {
-        console.error('Erreur lors du chargement des propriétés:', data.error);
+        console.error('❌ Erreur dans la réponse API:', data.error);
+        setFilteredProperties([]);
       }
     } catch (error) {
-      console.error('Erreur réseau:', error);
+      console.error('❌ Erreur réseau fetchProperties:', error);
+      setFilteredProperties([]);
     } finally {
       setIsLoading(false);
+      console.log('🏁 fetchProperties terminé');
     }
   };
 
+  // Fonction pour récupérer les détails d'une propriété
   const fetchPropertyDetails = async (id: number) => {
     try {
+      console.log(`🔍 Fetch détails pour ID: ${id}`);
       const response = await fetch(`/api/properties/${id}`);
       const data = await response.json();
       
+      console.log('📦 Réponse API détails:', data);
+      
       if (data.success) {
         const normalizedProperty = normalizePropertyData(data.data);
+        console.log('✅ Détails normalisés:', {
+          id: normalizedProperty.id,
+          title: normalizedProperty.title,
+          type: normalizedProperty.type,
+          price: normalizedProperty.price,
+          beds: normalizedProperty.beds,
+          offices: normalizedProperty.offices,
+          images: normalizedProperty.images.length
+        });
+        
         setSelectedProperty(normalizedProperty);
         setCurrentImageIndex(0);
         document.body.style.overflow = 'hidden';
       } else {
-        console.error('Erreur API:', data.error);
+        console.error('❌ Erreur API détails:', data.error);
         alert(`Erreur: ${data.error}`);
       }
     } catch (error: any) {
-      console.error('Erreur réseau:', error);
+      console.error('❌ Erreur réseau détails:', error);
       alert('Erreur réseau lors du chargement des détails');
     }
   };
 
+  // Handlers
   const handleBackClick = (): void => {
     onBack();
   };
 
   const handlePropertyClick = (property: Property): void => {
+    console.log('🎯 Clic sur propriété:', property.id, property.title);
     fetchPropertyDetails(property.id);
   };
 
@@ -538,24 +645,19 @@ const PropertyImageDisplay = ({
     document.body.style.overflow = 'auto';
   };
 
-  // Fonction pour formater le numéro WhatsApp
   const formatWhatsAppNumber = (phoneNumber: string): string => {
     let cleaned = phoneNumber.replace(/\D/g, '');
-    
     if (cleaned.startsWith('0')) {
       cleaned = '229' + cleaned.substring(1);
     }
-    
     if (cleaned.startsWith('229')) {
-      cleaned = cleaned;
+      return cleaned;
     } else if (cleaned.length === 9 && !cleaned.startsWith('229')) {
-      cleaned = '229' + cleaned;
+      return '229' + cleaned;
     }
-    
     return cleaned;
   };
 
-  // Message WhatsApp avec toutes les informations
   const createWhatsAppMessage = (property: Property): string => {
     const today = new Date();
     const formattedDate = today.toLocaleDateString('fr-FR', {
@@ -570,6 +672,9 @@ const PropertyImageDisplay = ({
     message += `📋 **Informations de réservation :**\n`;
     message += `• Type de bien : ${property.type}\n`;
     message += `• Capacité : ${property.capacity} personne(s)\n`;
+    message += `• Chambres : ${property.bedrooms || 0}\n`;
+    message += `• Lits : ${property.beds || 0}\n`;
+    message += `• Salles de bain : ${property.bathrooms || 0}\n`;
     
     if (guests) {
       message += `• Nombre de voyageurs : ${guests}\n`;
@@ -577,6 +682,10 @@ const PropertyImageDisplay = ({
     
     message += `\n💰 **Informations tarifaires :**\n`;
     message += `• Prix par nuit : ${property.price.toLocaleString("fr-FR")} ${property.currency}\n`;
+    
+    if (property.weeklyDiscount && property.weeklyDiscount > 0) {
+      message += `• Réduction hebdomadaire : ${property.weeklyDiscount}%\n`;
+    }
     
     if (property.cleaningFee && property.cleaningFee > 0) {
       message += `• Frais de ménage : ${property.cleaningFee.toLocaleString("fr-FR")} ${property.currency}\n`;
@@ -599,11 +708,9 @@ const PropertyImageDisplay = ({
 
   const handleWhatsAppReservation = (property: Property, e: React.MouseEvent): void => {
     e.stopPropagation();
-    
     const whatsappNumber = formatWhatsAppNumber(property.owner.phone);
     const message = createWhatsAppMessage(property);
     const encodedMessage = encodeURIComponent(message);
-    
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
     handleCloseModal();
@@ -611,20 +718,39 @@ const PropertyImageDisplay = ({
 
   const handleQuickWhatsApp = (property: Property, e: React.MouseEvent): void => {
     e.stopPropagation();
-    
     const whatsappNumber = formatWhatsAppNumber(property.owner.phone);
     const quickMessage = `Bonjour ${property.owner.name}, je suis intéressé(e) par "${property.title}" à ${property.location}, ${property.city}. Pourriez-vous m'en dire plus ?`;
     const encodedMessage = encodeURIComponent(quickMessage);
-    
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
   };
 
-  const handleSearchSubmit = (): void => {
-    setIsSearching(true);
-    filterProperties();
+  // Fonction pour filtrer les propriétés - UNE SEULE DÉCLARATION
+  const filterProperties = () => {
+    console.log('🎯 Filtrage des propriétés avec:', {
+      location,
+      propertyType,
+      guests,
+      hasLocation: !!location,
+      hasType: !!propertyType,
+      hasGuests: !!guests
+    });
     
-    // Mettre à jour l'URL avec les paramètres de recherche
+    // Vérifiez que les valeurs ne sont pas undefined
+    const filters: any = {};
+    if (location && location.trim()) filters.location = location.trim();
+    if (propertyType && propertyType.trim()) filters.type = propertyType.trim();
+    if (guests && guests.trim()) filters.guests = guests.trim();
+    
+    fetchProperties(filters);
+  };
+
+  // Handler de recherche - UNE SEULE DÉCLARATION
+  const handleSearchSubmit = (): void => {
+    console.log('🔍 Soumission recherche:', { location, propertyType, guests });
+    setIsSearching(true);
+    
+    // Mettez à jour l'URL
     const params = new URLSearchParams();
     if (location) params.append('location', location);
     if (propertyType) params.append('type', propertyType);
@@ -632,22 +758,45 @@ const PropertyImageDisplay = ({
     
     const newUrl = `/search?${params.toString()}`;
     router.push(newUrl);
+    
+    // Appelez directement filterProperties
+    filterProperties();
   };
 
   const handleShowAllProperties = (): void => {
+    console.log('🔄 Affichage de toutes les propriétés');
     setLocation("");
     setPropertyType("");
     setGuests("");
     setIsSearching(false);
     fetchProperties();
-    
-    // Réinitialiser l'URL
     router.push('/search');
   };
 
-  const filterProperties = () => {
-    fetchProperties({ location, type: propertyType, guests });
-  };
+  // Charger les propriétés au démarrage
+  useEffect(() => {
+    console.log('🚀 Initialisation Search component');
+    console.log('📌 Paramètres URL:', { initialLocation, initialType, initialGuests });
+    
+    // Si des filtres sont présents dans l'URL, faites une recherche
+    if (initialLocation || initialType || initialGuests) {
+      console.log('🔄 Filtres initiaux détectés dans l\'URL, lancement de la recherche...');
+      
+      const filters: any = {};
+      if (initialLocation) filters.location = initialLocation;
+      if (initialType) filters.type = initialType;
+      if (initialGuests) filters.guests = initialGuests;
+      
+      fetchProperties(filters);
+      setIsSearching(true);
+      setHasInitialSearch(true);
+    } else {
+      // Sinon, chargez toutes les propriétés
+      console.log('🔄 Pas de filtres initiaux, chargement de toutes les propriétés...');
+      fetchProperties();
+      setIsSearching(false);
+    }
+  }, []); // Exécutez seulement au montage
 
   useEffect(() => {
     if (hasInitialSearch) return;
@@ -656,8 +805,7 @@ const PropertyImageDisplay = ({
       const timeoutId = setTimeout(() => {
         filterProperties();
         setIsSearching(true);
-      }, 300);
-
+      }, 500);
       return () => clearTimeout(timeoutId);
     }
   }, [location, propertyType, guests, hasInitialSearch]);
@@ -689,21 +837,10 @@ const PropertyImageDisplay = ({
     }
   };
 
-  // Fonction pour formater le type de bien
-  const formatPropertyType = (category: "HOUSE" | "OFFICE" | "EVENT", subType: string) => {
-    switch (category) {
-      case "HOUSE": return "Maison";
-      case "OFFICE": return "Bureau";
-      case "EVENT": return "Salle événement";
-      default: return subType || "Propriété";
-    }
-  };
-
   // Rendu d'un badge d'icône pour les équipements
   const renderAmenityBadge = (amenity: string) => {
     const lowerAmenity = amenity.toLowerCase();
     
-    // Mapping des icônes avec lucide-react
     if (lowerAmenity.includes('wifi') || lowerAmenity.includes('internet')) {
       return <Wifi className="w-3 h-3" />;
     } else if (lowerAmenity.includes('piscine') || lowerAmenity.includes('pool')) {
@@ -755,6 +892,32 @@ const PropertyImageDisplay = ({
     return null;
   };
 
+  // Fonction de debug
+  const debugAPI = () => {
+    console.log('🐛 DEBUG API - État complet:');
+    console.log('📊 filteredProperties:', filteredProperties.length, 'propriétés');
+    
+    if (filteredProperties.length > 0) {
+      const first = filteredProperties[0];
+      console.log('🔍 Première propriété:');
+      console.log('  • ID:', first.id);
+      console.log('  • Title:', first.title);
+      console.log('  • Type:', first.type);
+      console.log('  • Price:', first.price);
+      console.log('  • Beds:', first.beds);
+      console.log('  • Offices:', first.offices);
+      console.log('  • Meeting Rooms:', first.meetingRooms);
+      console.log('  • Has Stage:', first.hasStage);
+      console.log('  • Images:', first.images.length);
+      console.log('  • Postal Code:', first.postalCode);
+      console.log('  • Weekly Discount:', first.weeklyDiscount);
+      
+      console.log('📋 Tous les champs:', Object.keys(first));
+    }
+    
+    console.log('📡 API Debug:', apiDebug);
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }} 
@@ -762,10 +925,9 @@ const PropertyImageDisplay = ({
       exit={{ opacity: 0 }}
       className="min-h-screen bg-white"
     >
-      {/* Barre de recherche */}
+      {/* Barre de recherche mobile */}
       <div className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm z-40 border-b border-gray-200 md:hidden">
         <div className="container mx-auto px-4 py-3">
-          {/* Bouton Retour */}
           <div className="flex items-center justify-between mb-3">
             <button 
               onClick={handleBackClick} 
@@ -787,7 +949,6 @@ const PropertyImageDisplay = ({
             )}
           </div>
           
-          {/* Barre de recherche */}
           <div className="flex items-center gap-2 mb-2">
             <div className="flex-1">
               <input 
@@ -822,7 +983,6 @@ const PropertyImageDisplay = ({
             </button>
           </div>
           
-          {/* Champ voyageurs */}
           <div className="mb-2">
             <input 
               type="number" 
@@ -836,7 +996,6 @@ const PropertyImageDisplay = ({
             />
           </div>
           
-          {/* Filtres actifs compacts */}
           {activeFiltersCount > 0 && (
             <div className="pt-2 border-t border-gray-100">
               <div className="flex items-center justify-between">
@@ -858,7 +1017,6 @@ const PropertyImageDisplay = ({
 
       {/* Version desktop */}
       <div className="hidden md:block container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20">
-        {/* Header & Search Bar desktop */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 sticky top-20 bg-white/95 backdrop-blur-sm z-30 py-4 -mx-4 px-4 md:mx-0 md:px-0">
           <button 
             onClick={handleBackClick} 
@@ -871,7 +1029,6 @@ const PropertyImageDisplay = ({
           
           <div className="flex-1 w-full md:max-w-2xl mx-auto order-3 md:order-none mt-4 md:mt-0">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center border-2 border-gray-200 hover:border-brand transition-colors shadow-sm rounded-2xl sm:rounded-full p-3 sm:p-2">
-              {/* Destination */}
               <div className="flex-1 pb-3 sm:pb-0 sm:pr-4 border-b sm:border-b-0 sm:border-r border-gray-200 mb-3 sm:mb-0">
                 <div className="text-xs font-bold text-gray-800 mb-1">Destination</div>
                 <input 
@@ -885,7 +1042,6 @@ const PropertyImageDisplay = ({
                 />
               </div>
               
-              {/* Type de bien */}
               <div className="flex-1 pb-3 sm:pb-0 sm:px-4 border-b sm:border-b-0 sm:border-r border-gray-200 mb-3 sm:mb-0">
                 <div className="text-xs font-bold text-gray-800 mb-1">Type de bien</div>
                 <input 
@@ -899,7 +1055,6 @@ const PropertyImageDisplay = ({
                 />
               </div>
               
-              {/* Voyageurs */}
               <div className="flex-1 sm:pr-4">
                 <div className="text-xs font-bold text-gray-800 mb-1">Voyageurs</div>
                 <div className="flex items-center justify-between">
@@ -923,7 +1078,6 @@ const PropertyImageDisplay = ({
                 </div>
               </div>
               
-              {/* Bouton Rechercher */}
               <button 
                 onClick={handleSearchSubmit}
                 className="hidden sm:flex bg-brand text-white p-3 rounded-full hover:bg-brand-dark transition-colors ml-2 items-center justify-center gap-2"
@@ -949,8 +1103,7 @@ const PropertyImageDisplay = ({
 
       {/* Contenu principal */}
       <div className={`${isMobile ? 'pt-64' : 'pt-24 md:pt-0'} pb-20 container mx-auto px-4 sm:px-6 lg:px-8`}>
-        
-        {/* Afficher les filtres actifs uniquement sur desktop */}
+        {/* Filtres actifs desktop */}
         {!isMobile && activeFiltersCount > 0 && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
@@ -989,10 +1142,13 @@ const PropertyImageDisplay = ({
           </div>
         )}
 
-        {/* Loading state */}
+        {/* Loading */}
         {isLoading && (
           <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
+            <div className="text-center">
+              <Loader2 className="w-12 h-12 text-brand animate-spin mx-auto mb-4" />
+              <p className="text-gray-600">Chargement des propriétés...</p>
+            </div>
           </div>
         )}
 
@@ -1027,7 +1183,7 @@ const PropertyImageDisplay = ({
               )}
             </div>
 
-            {/* Results Grid - Responsive */}
+            {/* Grid des propriétés */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {filteredProperties.map((property) => (
                 <div 
@@ -1058,7 +1214,6 @@ const PropertyImageDisplay = ({
                   
                   {/* Contenu */}
                   <div className="p-4">
-                    {/* Titre et localisation */}
                     <h3 className="font-bold text-gray-900 text-lg mb-1 line-clamp-1">{property.title}</h3>
                     <p className="text-gray-600 text-sm mb-3 line-clamp-1">
                       <MapPin className="w-3 h-3 inline mr-1" />
@@ -1085,14 +1240,34 @@ const PropertyImageDisplay = ({
                               <span>{property.bathrooms} sdb</span>
                             </div>
                           )}
+                          {property.beds && property.beds > 0 && (
+                            <div className="flex items-center gap-1">
+                              <Bed className="w-4 h-4" />
+                              <span>{property.beds} lits</span>
+                            </div>
+                          )}
                         </>
                       )}
                       
                       {property.category === "OFFICE" && (
-                        <div className="flex items-center gap-1">
-                          <Building className="w-4 h-4" />
-                          <span>Capacité: {property.capacity} pers.</span>
-                        </div>
+                        <>
+                          <div className="flex items-center gap-1">
+                            <Building className="w-4 h-4" />
+                            <span>{property.capacity} pers.</span>
+                          </div>
+                          {property.offices && property.offices > 0 && (
+                            <div className="flex items-center gap-1">
+                              <Briefcase className="w-4 h-4" />
+                              <span>{property.offices} bureaux</span>
+                            </div>
+                          )}
+                          {property.meetingRooms && property.meetingRooms > 0 && (
+                            <div className="flex items-center gap-1">
+                              <Printer className="w-4 h-4" />
+                              <span>{property.meetingRooms} salles</span>
+                            </div>
+                          )}
+                        </>
                       )}
                       
                       {property.category === "EVENT" && (
@@ -1184,11 +1359,10 @@ const PropertyImageDisplay = ({
         )}
       </div>
 
-      {/* Modale pour afficher les détails du profil */}
+      {/* Modale de détails */}
       <AnimatePresence>
         {selectedProperty && (
           <>
-            {/* Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1197,7 +1371,6 @@ const PropertyImageDisplay = ({
               onClick={handleCloseModal}
             />
             
-            {/* Modale - Responsive */}
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1205,7 +1378,6 @@ const PropertyImageDisplay = ({
               className="fixed inset-0 md:inset-4 md:inset-10 lg:inset-20 bg-white md:rounded-2xl lg:rounded-3xl shadow-2xl z-50 overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header de la modale */}
               <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
                 <div className="flex items-center gap-3">
                   <button
@@ -1224,9 +1396,8 @@ const PropertyImageDisplay = ({
                 </div>
               </div>
               
-              {/* Contenu scrollable */}
               <div className="flex-1 overflow-y-auto">
-                {/* Galerie d'images */}
+                {/* Galerie */}
                 {propertyImages.length > 0 ? (
                   <div className="relative aspect-video bg-gray-200 overflow-hidden">
                     <PropertyImageDisplay
@@ -1235,7 +1406,6 @@ const PropertyImageDisplay = ({
                       className="w-full h-full object-cover"
                     />
                     
-                    {/* Boutons de navigation galerie */}
                     {propertyImages.length > 1 && (
                       <>
                         <button
@@ -1253,7 +1423,6 @@ const PropertyImageDisplay = ({
                           <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
                         </button>
                         
-                        {/* Indicateurs d'images */}
                         <div className="absolute bottom-2 md:bottom-4 left-1/2 -translate-x-1/2 flex gap-1 md:gap-2">
                           {propertyImages.map((_, index) => (
                             <button
@@ -1271,7 +1440,6 @@ const PropertyImageDisplay = ({
                       </>
                     )}
                     
-                    {/* Badge type */}
                     <div className="absolute top-2 md:top-4 right-2 md:right-4 bg-white/90 px-2 py-1 rounded text-xs font-semibold">
                       {selectedProperty.type}
                     </div>
@@ -1285,9 +1453,8 @@ const PropertyImageDisplay = ({
                   </div>
                 )}
                 
-                {/* Contenu principal */}
+                {/* Contenu détaillé */}
                 <div className="p-4 md:p-6">
-                  {/* Titre et localisation */}
                   <div className="mb-6">
                     <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
                       {selectedProperty.title}
@@ -1302,6 +1469,11 @@ const PropertyImageDisplay = ({
                     {selectedProperty.address && (
                       <p className="text-gray-500 text-sm md:text-base mt-1">
                         {selectedProperty.address}
+                      </p>
+                    )}
+                    {selectedProperty.postalCode && (
+                      <p className="text-gray-500 text-sm md:text-base">
+                        Code postal: {selectedProperty.postalCode}
                       </p>
                     )}
                   </div>
@@ -1344,6 +1516,14 @@ const PropertyImageDisplay = ({
                       </div>
                     )}
                     
+                    {selectedProperty.beds && selectedProperty.beds > 0 && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
+                        <Bed className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
+                        <div className="text-xs md:text-sm text-gray-600">Lits</div>
+                        <div className="text-base md:text-lg font-bold">{selectedProperty.beds}</div>
+                      </div>
+                    )}
+                    
                     {selectedProperty.bathrooms && selectedProperty.bathrooms > 0 && (
                       <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
                         <Bath className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
@@ -1367,7 +1547,6 @@ const PropertyImageDisplay = ({
                         <div className="text-base md:text-lg font-bold">{selectedProperty.floors}</div>
                       </div>
                     )}
-                    
                     {selectedProperty.parkingSpots && selectedProperty.parkingSpots > 0 && (
                       <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
                         <Car className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
@@ -1388,6 +1567,38 @@ const PropertyImageDisplay = ({
                       <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
                         <Wifi className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
                         <div className="text-xs md:text-sm text-gray-600">WiFi</div>
+                        <div className="text-base md:text-lg font-bold text-green-600">Oui</div>
+                      </div>
+                    )}
+                    
+                    {selectedProperty.hasStage && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
+                        <Presentation className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
+                        <div className="text-xs md:text-sm text-gray-600">Scène</div>
+                        <div className="text-base md:text-lg font-bold text-green-600">Oui</div>
+                      </div>
+                    )}
+                    
+                    {selectedProperty.hasSoundSystem && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
+                        <Music className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
+                        <div className="text-xs md:text-sm text-gray-600">Sono</div>
+                        <div className="text-base md:text-lg font-bold text-green-600">Oui</div>
+                      </div>
+                    )}
+                    
+                    {selectedProperty.hasProjector && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
+                        <Presentation className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
+                        <div className="text-xs md:text-sm text-gray-600">Projecteur</div>
+                        <div className="text-base md:text-lg font-bold text-green-600">Oui</div>
+                      </div>
+                    )}
+                    
+                    {selectedProperty.hasCatering && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-3 md:p-4 text-center">
+                        <Utensils className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-gray-700" />
+                        <div className="text-xs md:text-sm text-gray-600">Restauration</div>
                         <div className="text-base md:text-lg font-bold text-green-600">Oui</div>
                       </div>
                     )}
@@ -1442,7 +1653,7 @@ const PropertyImageDisplay = ({
                     )}
                   </div>
                   
-                  {/* Équipements et services */}
+                  {/* Équipements */}
                   <div className="mb-6">
                     <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4">Équipements et services</h3>
                     {selectedProperty.equipementsDetails && selectedProperty.equipementsDetails.length > 0 ? (
@@ -1473,7 +1684,7 @@ const PropertyImageDisplay = ({
                     )}
                   </div>
                   
-                  {/* Informations propriétaire */}
+                  {/* Propriétaire */}
                   <div className="mb-6 p-4 bg-blue-50 rounded-xl">
                     <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-2">À propos du propriétaire</h3>
                     <div className="flex items-center gap-3">
@@ -1495,7 +1706,7 @@ const PropertyImageDisplay = ({
                     </div>
                   </div>
                   
-                  {/* Bouton de réservation principal */}
+                  {/* Bouton de réservation */}
                   <div className="sticky bottom-0 bg-white pt-3 pb-3 md:pt-4 md:pb-4 border-t border-gray-200 -mx-4 md:-mx-6 px-4 md:px-6">
                     <button 
                       onClick={(e) => handleWhatsAppReservation(selectedProperty, e)}
@@ -1508,7 +1719,7 @@ const PropertyImageDisplay = ({
                 </div>
               </div>
               
-              {/* Bouton de fermeture mobile */}
+              {/* Fermeture mobile */}
               <div className="md:hidden p-4 border-t border-gray-200 bg-white">
                 <button
                   onClick={handleCloseModal}

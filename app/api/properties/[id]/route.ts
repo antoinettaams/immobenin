@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(
   request: NextRequest,
@@ -44,27 +44,29 @@ export async function GET(
       );
     }
 
-    console.log(`✅ Bien trouvé: ${property.title}`);
-    console.log('📋 Champs disponibles:');
-    console.log('  • maxGuests:', property.maxGuests);
-    console.log('  • employees:', property.employees);
-    console.log('  • eventCapacity:', property.eventCapacity);
-    console.log('  • bedrooms:', property.bedrooms);
-    console.log('  • beds:', property.beds);
-    console.log('  • bathrooms:', property.bathrooms);
-    console.log('  • floors:', property.floors);
-    console.log('  • size:', property.size);
-    console.log('  • privateEntrance:', property.privateEntrance);
-    console.log('  • offices:', property.offices);
+    console.log(`✅ Bien trouvé: "${property.title}"`);
+    console.log('📋 Champs disponibles depuis la base:');
+    console.log('  • id:', property.id);
+    console.log('  • title:', property.title);
+    console.log('  • category:', property.category);
+    console.log('  • subType:', property.subType);
+    console.log('  • basePrice:', property.basePrice);
+    console.log('  • beds:', property.beds, '(type:', typeof property.beds, ')');
+    console.log('  • offices:', property.offices, '(type:', typeof property.offices, ')');
     console.log('  • meetingRooms:', property.meetingRooms);
     console.log('  • workstations:', property.workstations);
-    console.log('  • parkingSpots:', property.parkingSpots);
-    console.log('  • wheelchairAccessible:', property.wheelchairAccessible);
-    console.log('  • hasStage:', property.hasStage);
+    console.log('  • hasStage:', property.hasStage, '(type:', typeof property.hasStage, ')');
     console.log('  • hasSoundSystem:', property.hasSoundSystem);
     console.log('  • hasProjector:', property.hasProjector);
     console.log('  • hasCatering:', property.hasCatering);
-    console.log('  • minBookingHours:', property.minBookingHours);
+    console.log('  • postalCode:', property.postalCode);
+    console.log('  • latitude:', property.latitude);
+    console.log('  • longitude:', property.longitude);
+    console.log('  • weeklyDiscount:', property.weeklyDiscount);
+    console.log('  • monthlyDiscount:', property.monthlyDiscount);
+    console.log('  • cleaningFee:', property.cleaningFee);
+    console.log('  • extraGuestFee:', property.extraGuestFee);
+    console.log('  • securityDeposit:', property.securityDeposit);
 
     // Déterminer la capacité selon la catégorie
     let capacity = 0;
@@ -108,7 +110,7 @@ export async function GET(
         displayType = property.subType || 'Propriété';
     }
 
-    // NETTOYAGE DES IMAGES
+    // TRAITEMENT DES IMAGES
     const cleanImages = (property.images || [])
       .filter((img: any) => {
         if (!img || typeof img !== 'string') {
@@ -117,13 +119,8 @@ export async function GET(
         
         const trimmed = img.trim();
         
-        // Exclure URLs blob  
+        // Exclure URLs blob (temporaires)
         if (trimmed.startsWith('blob:')) {
-          return false;
-        }
-        
-        // Vérifier longueur minimale
-        if (trimmed.length < 10) {
           return false;
         }
         
@@ -131,6 +128,15 @@ export async function GET(
       })
       .map((img: string) => {
         const trimmed = img.trim();
+        
+        // Si c'est base64 (très long)
+        if (trimmed.startsWith('data:image/') && trimmed.includes('base64')) {
+          // Si trop long, remplacer par placeholder
+          if (trimmed.length > 500000) { // ~500KB
+            return 'https://via.placeholder.com/800x600/cccccc/969696?text=Image+non+disponible';
+          }
+          return trimmed;
+        }
         
         // Nettoyer URLs Cloudinary
         if (trimmed.includes('cloudinary.com')) {
@@ -163,10 +169,11 @@ export async function GET(
       // === Informations de base ===
       id: property.id,
       title: property.title || `${displayType} à ${property.city}`,
-      type: displayType,
+      type: displayType, // CRITIQUE: doit correspondre au frontend
       category: property.category,
       subType: property.subType,
       privacy: property.privacy,
+      displayType: displayType,
       
       // === LocationStep ===
       location: property.neighborhood || property.city,
@@ -186,28 +193,29 @@ export async function GET(
       // Champs maison
       maxGuests: property.maxGuests,
       bedrooms: property.bedrooms,
-      beds: property.beds,
+      beds: property.beds || 0,
       bathrooms: property.bathrooms,
       privateEntrance: property.privateEntrance || false,
       
       // Champs bureau
       employees: property.employees,
-      offices: property.offices,
-      meetingRooms: property.meetingRooms,
-      workstations: property.workstations,
+      offices: property.offices || 0,
+      meetingRooms: property.meetingRooms || 0,
+      workstations: property.workstations || 0,
       
       // Champs événement
       eventCapacity: property.eventCapacity,
       parkingSpots: property.parkingSpots,
       wheelchairAccessible: property.wheelchairAccessible || false,
-      hasStage: property.hasStage || false,
-      hasSoundSystem: property.hasSoundSystem || false,
-      hasProjector: property.hasProjector || false,
-      hasCatering: property.hasCatering || false,
-      minBookingHours: property.minBookingHours,
+      hasStage: property.hasStage === true,
+      hasSoundSystem: property.hasSoundSystem === true,
+      hasProjector: property.hasProjector === true,
+      hasCatering: property.hasCatering === true,
+      minBookingHours: property.minBookingHours || 0,
       
       // === PriceStep ===
-      price: property.basePrice || 0,
+      price: property.basePrice || 0, // CRITIQUE: le frontend cherche 'price'
+      basePrice: property.basePrice || 0,
       currency: property.currency || 'FCFA',
       weeklyDiscount: property.weeklyDiscount || 0,
       monthlyDiscount: property.monthlyDiscount || 0,
@@ -224,12 +232,18 @@ export async function GET(
       img: images[0] || '',
       images: images,
       
+      // Information sur les images
+      _imageInfo: {
+        count: images.length,
+        hasBase64: images.some(img => img.startsWith('data:image/')),
+      },
+      
       // === DescriptionStep ===
       description: property.description ? {
         summary: property.description.summary || '',
         spaceDescription: property.description.spaceDescription || '',
         guestAccess: property.description.guestAccess || '',
-        neighborhood: property.description.neighborhoodInfo || '',
+        neighborhoodInfo: property.description.neighborhoodInfo || '',
         createdAt: property.description.createdAt?.toISOString(),
       } : null,
       
@@ -240,7 +254,7 @@ export async function GET(
         id: e.equipement.id,
         code: e.equipement.code,
         nom: e.equipement.nom,
-        description: e.equipement.description,
+        description: e.equipement.description || '',
         categorie: e.equipement.categorie,
         pourMaison: e.equipement.pourMaison,
         pourBureau: e.equipement.pourBureau,
@@ -289,12 +303,23 @@ export async function GET(
       },
     };
 
-    console.log(`✅ Propriété ${propertyId} formatée avec succès`);
+    console.log(`\n✅ Propriété ${propertyId} formatée avec succès`);
     console.log(`📸 Images: ${images.length}`);
     console.log(`🏠 Chambres: ${property.bedrooms}`);
-    console.log(`🛏️ Lits: ${property.beds}`);
+    console.log(`🛏️ Lits: ${formattedProperty.beds}`);
     console.log(`🚿 Salles de bain: ${property.bathrooms}`);
+    console.log(`💰 Prix: ${formattedProperty.price} ${formattedProperty.currency}`);
     console.log(`📦 Taille de la réponse: ${JSON.stringify(formattedProperty).length} caractères`);
+    
+    console.log('\n🔍 VÉRIFICATION FINALE API [id]:');
+    console.log('  • type:', formattedProperty.type);
+    console.log('  • price:', formattedProperty.price);
+    console.log('  • basePrice:', formattedProperty.basePrice);
+    console.log('  • beds:', formattedProperty.beds);
+    console.log('  • offices:', formattedProperty.offices);
+    console.log('  • hasStage:', formattedProperty.hasStage);
+    console.log('  • weeklyDiscount:', formattedProperty.weeklyDiscount);
+    console.log('  • postalCode:', formattedProperty.postalCode);
 
     return NextResponse.json({
       success: true,
@@ -321,7 +346,6 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // DÉBALLER LA PROMISE params
     const { id } = await params;
     const propertyId = parseInt(id);
     const body = await request.json();
@@ -347,6 +371,14 @@ export async function PUT(
         maxGuests: body.maxGuests,
         employees: body.employees,
         eventCapacity: body.eventCapacity,
+        beds: body.beds,
+        offices: body.offices,
+        meetingRooms: body.meetingRooms,
+        workstations: body.workstations,
+        hasStage: body.hasStage,
+        hasSoundSystem: body.hasSoundSystem,
+        hasProjector: body.hasProjector,
+        hasCatering: body.hasCatering,
       }
     });
     
@@ -375,7 +407,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // DÉBALLER LA PROMISE params
     const { id } = await params;
     const propertyId = parseInt(id);
     
