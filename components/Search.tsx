@@ -1320,7 +1320,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                       
                       <button 
                         onClick={(e) => handleQuickWhatsApp(property, e)}
-                        className="text-brand font-semibold text-sm hover:text-brand-dark transition-colors px-3 py-1 rounded-lg bg-brand/5 hover:bg-brand/10 flex items-center gap-1"
+                        className="text-brand font-semibold cursor-pointer text-sm hover:text-brand-dark transition-colors px-3 py-1 rounded-lg bg-brand/5 hover:bg-brand/10 flex items-center gap-1"
                         aria-label={`Contacter ${property.owner.name} pour ${property.title}`}
                       >
                         <Phone className="w-3 h-3" />
@@ -1493,7 +1493,7 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                     
                     <button 
                       onClick={(e) => handleWhatsAppReservation(selectedProperty, e)}
-                      className="bg-green-600 text-white px-4 py-3 md:px-6 md:py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-sm md:text-base"
+                      className="bg-green-600 text-white cursor-pointer px-4 py-3 md:px-6 md:py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-sm md:text-base"
                     >
                       <Phone className="w-4 h-4 md:w-5 md:h-5" />
                       Réserver sur WhatsApp
@@ -1710,9 +1710,9 @@ export const Search: React.FC<SearchProps> = ({ onBack }) => {
                   <div className="sticky bottom-0 bg-white pt-3 pb-3 md:pt-4 md:pb-4 border-t border-gray-200 -mx-4 md:-mx-6 px-4 md:px-6">
                     <button 
                       onClick={(e) => handleWhatsAppReservation(selectedProperty, e)}
-                      className="w-full bg-green-600 text-white px-4 py-3 md:px-6 md:py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-base md:text-lg"
+                      className="w-full bg-green-600 text-white px-4 py-3  cursor-pointer md:px-6 md:py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-base md:text-lg"
                     >
-                      <Phone className="w-5 h-5 md:w-6 md:h-6" />
+                      <Phone className="w-5 h-5 md:w-6 md:h-6"/>
                       Contacter {selectedProperty.owner.name} sur WhatsApp
                     </button>
                   </div>
